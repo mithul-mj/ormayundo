@@ -1,0 +1,62 @@
+/**
+ * Settings for repeatable jobs
+ *
+ * @see {@link https://docs.bullmq.io/guide/jobs/repeatable}
+ */
+export interface RepeatOptions {
+    /**
+     * End date when job should stop
+     */
+    endDate?: Date | string | number;
+    /**
+     * Start date when job should start
+     */
+    startDate?: Date | string | number;
+    /**
+     * A repeat pattern
+     */
+    pattern?: string;
+    /**
+     * Custom repeatable key. This is the key that holds the "metadata"
+     * of a given repeatable job. This key is normally auto-generated but
+     * it is sometimes useful to specify a custom key for easier retrieval
+     * of repeatable jobs.
+     */
+    key?: string;
+    /**
+     * Number of times the job should repeat at max.
+     */
+    limit?: number;
+    /**
+     * Repeat after this amount of milliseconds
+     * (`pattern` setting cannot be used together with this setting.)
+     */
+    every?: number;
+    /**
+     * Repeated job should start right now
+     * ( work only with cron settings)
+     */
+    immediately?: boolean;
+    /**
+     * The start value for the repeat iteration count.
+     */
+    count?: number;
+    /**
+     * Offset in milliseconds to affect the next iteration time
+     * */
+    offset?: number;
+    /**
+     * Internal property to store the previous time the job was executed.
+     */
+    prevMillis?: number;
+    /**
+     * Internal property to store the job id
+     * @deprecated not in use anymore
+     */
+    jobId?: string;
+    /**
+     * Timezone
+     * @see {@link https://en.wikipedia.org/wiki/List_of_tz_database_time_zones}
+     */
+    tz?: string;
+}
