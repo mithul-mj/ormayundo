@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Brain, CheckCircle, Clock } from 'lucide-react';
+import { Brain, CheckCircle, Clock, Trash2 } from 'lucide-react';
+
+import { API_URL } from '../config';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_URL,
   withCredentials: true
 });
 
@@ -38,6 +40,21 @@ const Dashboard = ({ user }) => {
       setCurrentCardIndex((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to submit review:', error);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation(); // Prevent flipping the card
+    const card = dueCards[currentCardIndex];
+    if (window.confirm("Are you sure you want to delete this flashcard?")) {
+      try {
+        await api.delete(`/recall/${card._id}`);
+        // Remove from local array without incrementing index (so the next card slides into this index)
+        setDueCards((prev) => prev.filter((_, idx) => idx !== currentCardIndex));
+        setIsFlipped(false);
+      } catch (error) {
+        console.error('Failed to delete card:', error);
+      }
     }
   };
 
@@ -77,9 +94,18 @@ const Dashboard = ({ user }) => {
             </a>
           )}
         </div>
-        <span className="text-xs font-medium bg-red-50 text-brand px-3 py-1 rounded-full">
-          {dueCards.length - currentCardIndex} Due
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium bg-red-50 text-brand px-3 py-1 rounded-full">
+            {dueCards.length - currentCardIndex} Due
+          </span>
+          <button 
+            onClick={handleDelete}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete Flashcard"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* The Flashcard */}

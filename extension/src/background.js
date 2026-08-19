@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
+import { API_URL } from "./config";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDysR_QcERUV1mH0OSjkIKeOo2nm9edobc",
@@ -53,7 +54,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     (async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/recall', {
+        const response = await fetch('https://ormayundo.onrender.com/api/recall', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -86,7 +87,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     (async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/recall', {
+        const response = await fetch('https://ormayundo.onrender.com/api/recall', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

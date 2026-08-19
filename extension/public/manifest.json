@@ -37,6 +37,6 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "http://localhost:5000/*"
+    "https://ormayundo.onrender.com/*"
   ]
 }

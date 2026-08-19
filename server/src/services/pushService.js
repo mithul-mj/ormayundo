@@ -53,12 +53,17 @@ export const startCronJobs = () => {
 
   cron.schedule('* * * * *', async () => {
     try {
-      // BEST PRACTICE: Use MongoDB Aggregation to group by user at the database level!
-      // This prevents Out-Of-Memory (OOM) crashes if millions of cards are due.
+      // BEST PRACTICE: Only fetch cards that are due AND haven't been notified yet!
       const dueByUser = await RecallItem.aggregate([
-        { $match: { status: 'active', nextReviewAt: { $lte: new Date() } } },
+        { $match: { 
+            status: 'active', 
+            nextReviewAt: { $lte: new Date() },
+            notificationSent: { $ne: true } // Handles both false and undefined (legacy data)
+        }},
         { $group: { _id: '$userId', count: { $sum: 1 } } }
       ]);
+
+      if (dueByUser.length === 0) return; // No new due cards
 
       // Fetch the FCM tokens for these specific users
       const userIds = dueByUser.map(item => item._id);
@@ -70,11 +75,22 @@ export const startCronJobs = () => {
         tokenMap[user._id.toString()] = user.fcmToken;
       });
 
-      // Fire notifications
+      // Fire notifications and flip the flag
       for (const group of dueByUser) {
         const token = tokenMap[group._id.toString()];
         if (token) {
           await sendPushNotification(token, 'Time for Ormayundo!', `You have ${group.count} flashcards due for active recall.`);
+          
+          // CRITICAL: Flip the flag so we don't spam the user again!
+          await RecallItem.updateMany(
+            { 
+              userId: group._id, 
+              status: 'active', 
+              nextReviewAt: { $lte: new Date() },
+              notificationSent: { $ne: true }
+            },
+            { $set: { notificationSent: true } }
+          );
         } else {
           console.log(`[Cron] Found ${group.count} flashcards due for user ${group._id}, but they have NO FCM TOKEN saved in the database! Notification skipped.`);
         }

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
+import { API_URL } from '../config';
+
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_URL,
   withCredentials: true 
 });
 

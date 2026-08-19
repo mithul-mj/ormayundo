@@ -82,6 +82,7 @@ export const reviewRecallItem = async (req, res) => {
   item.correctCount = newCorrectCount;
   item.nextReviewAt = nextReviewAt;
   item.lastReviewedAt = new Date();
+  item.notificationSent = false; // CRITICAL: Reset the memory flag for the next cycle!
 
   // Ensure properties exist before mutating
   if (!item.reviewCount) item.reviewCount = 0;
@@ -97,4 +98,22 @@ export const reviewRecallItem = async (req, res) => {
   await item.save();
 
   res.status(STATUS_CODES.OK).json(item);
+};
+
+// @desc    Delete a recall item
+// @route   DELETE /api/recall/:id
+// @access  Private
+export const deleteRecallItem = async (req, res) => {
+  const recallId = req.params.id;
+
+  const item = await RecallItem.findOne({ _id: recallId, userId: req.user._id });
+
+  if (!item) {
+    res.status(STATUS_CODES.NOT_FOUND);
+    throw new Error('Recall item not found');
+  }
+
+  await RecallItem.deleteOne({ _id: recallId });
+
+  res.status(STATUS_CODES.OK).json({ message: 'Recall item deleted successfully' });
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import './index.css';
+import { API_URL } from './config';
 
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
@@ -64,7 +65,7 @@ function App() {
       });
 
       if (fcmToken) {
-        await fetch('http://localhost:5000/api/auth/fcm-token', {
+        await fetch(`${API_URL}/auth/fcm-token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

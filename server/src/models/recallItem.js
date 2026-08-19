@@ -40,6 +40,10 @@ const recallItemSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'archived'],
         default: 'active'
+    },
+    notificationSent: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 
