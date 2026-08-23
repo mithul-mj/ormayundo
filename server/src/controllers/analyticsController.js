@@ -26,6 +26,13 @@ export const getAnalytics = async (req, res) => {
       'Later': 0
     };
     
+    const timeBuckets = {
+      Morning: { total: 0, correct: 0 },    // 5 AM - 12 PM
+      Afternoon: { total: 0, correct: 0 },  // 12 PM - 5 PM
+      Evening: { total: 0, correct: 0 },    // 5 PM - 9 PM
+      Night: { total: 0, correct: 0 }       // 9 PM - 5 AM
+    };
+    
     const now = new Date();
     const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
     const threeDays = new Date(now); threeDays.setDate(threeDays.getDate() + 3);
@@ -57,7 +64,9 @@ export const getAnalytics = async (req, res) => {
          }
          
          totalReviews++;
-         if (history.rating === 'hard' || history.rating === 'forgot') hardForgotCount++;
+         if (history.rating === 'hard' || history.rating === 'forgot') {
+            hardForgotCount++;
+         }
       });
       
       // 5. Workload
@@ -93,6 +102,55 @@ export const getAnalytics = async (req, res) => {
       displayStreak = 0;
     }
 
+    // 🚀 OPTIMIZATION: MongoDB Aggregation Pipeline for Time of Day Accuracy
+    const timeAggregation = await RecallItem.aggregate([
+      { $match: { userId: req.user._id } },
+      { $unwind: "$reviewHistory" },
+      { 
+        $project: {
+          hour: { $hour: "$reviewHistory.reviewedAt" },
+          isCorrect: { 
+            $in: ["$reviewHistory.rating", ["good", "easy"]] 
+          }
+        }
+      },
+      {
+        $addFields: {
+          timeBucket: {
+            $switch: {
+              branches: [
+                { case: { $and: [ { $gte: ["$hour", 5] }, { $lt: ["$hour", 12] } ] }, then: "Morning" },
+                { case: { $and: [ { $gte: ["$hour", 12] }, { $lt: ["$hour", 17] } ] }, then: "Afternoon" },
+                { case: { $and: [ { $gte: ["$hour", 17] }, { $lt: ["$hour", 21] } ] }, then: "Evening" }
+              ],
+              default: "Night"
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: "$timeBucket",
+          total: { $sum: 1 },
+          correct: { $sum: { $cond: ["$isCorrect", 1, 0] } }
+        }
+      }
+    ]);
+
+    // Format accuracy by time
+    const accuracyBuckets = { "Morning": 0, "Afternoon": 0, "Evening": 0, "Night": 0 };
+    timeAggregation.forEach(bucket => {
+      const accuracy = bucket.total > 0 ? Math.round((bucket.correct / bucket.total) * 100) : 0;
+      accuracyBuckets[bucket._id] = accuracy;
+    });
+
+    const accuracyByTime = [
+      { time: "Morning", accuracy: accuracyBuckets["Morning"] },
+      { time: "Afternoon", accuracy: accuracyBuckets["Afternoon"] },
+      { time: "Evening", accuracy: accuracyBuckets["Evening"] },
+      { time: "Night", accuracy: accuracyBuckets["Night"] }
+    ];
+
     res.json({
       mastery: [
         { name: 'New', value: newCards, fill: '#3b82f6' },
@@ -105,7 +163,8 @@ export const getAnalytics = async (req, res) => {
       workload: workloadData,
       totalCards: cards.length,
       additionStreak: displayStreak,
-      maxStreak: req.user.maxStreak || 0
+      maxStreak: req.user.maxStreak || 0,
+      accuracyByTime
     });
 
   } catch (error) {

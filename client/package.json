@@ -19,6 +19,7 @@
     "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
+    "sweetalert2": "^11.10.8",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

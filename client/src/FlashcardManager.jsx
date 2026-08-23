@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Pencil, Trash2, X, Save, Search, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Swal from 'sweetalert2';
 import { API_URL } from './config';
 
 const FlashcardManager = () => {
@@ -38,12 +39,42 @@ const FlashcardManager = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this flashcard?")) return;
+    const result = await Swal.fire({
+      title: 'Delete this flashcard?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF5A5F',
+      cancelButtonColor: '#9CA3AF',
+      confirmButtonText: 'Yes, delete it!',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl font-bold px-6 py-2',
+        cancelButton: 'rounded-xl font-bold px-6 py-2'
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await axios.delete(`${API_URL}/recall/${id}`, { withCredentials: true });
       setCards(cards.filter(c => c._id !== id));
+      Swal.fire({
+        title: 'Deleted!',
+        text: 'Your flashcard has been deleted.',
+        icon: 'success',
+        confirmButtonColor: '#FF5A5F',
+        customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
+      });
     } catch (error) {
       console.error('Failed to delete card', error);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Failed to delete flashcard.',
+        icon: 'error',
+        confirmButtonColor: '#FF5A5F',
+        customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
+      });
     }
   };
 
@@ -104,41 +135,46 @@ const FlashcardManager = () => {
             </div>
           )}
           {currentCards.map((card) => (
-            <div key={card._id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6">
-              <div className="flex-1 space-y-4">
+            <div key={card._id} className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col md:flex-row gap-6">
+              <div className="flex-1 space-y-5">
 
                 {/* Question Section */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase text-gray-400 mb-1">Question</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-brand mb-1.5 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand"></div> Question
+                  </h3>
                   {editingId === card._id ? (
                     <input
                       type="text"
                       value={editForm.question}
                       onChange={e => setEditForm({ ...editForm, question: e.target.value })}
-                      className="w-full p-2 border border-gray-200 rounded-lg text-lg font-bold"
+                      className="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-inner focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] focus:outline-none transition-all"
                     />
                   ) : (
-                    <p className="text-lg font-bold text-gray-900">{card.question}</p>
+                    <p className="text-xl font-bold text-gray-900 leading-tight">{card.question}</p>
                   )}
                 </div>
 
                 {/* Answer Section */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase text-gray-400 mb-1">Answer (Source Text)</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Answer (Source Text)
+                  </h3>
                   {editingId === card._id ? (
                     <textarea
                       value={editForm.selectedText}
                       onChange={e => setEditForm({ ...editForm, selectedText: e.target.value })}
                       rows={6}
-                      className="w-full p-4 border border-gray-200 rounded-lg font-mono text-sm text-gray-700 bg-gray-50 focus:ring-2 focus:ring-[#FF5A5F] focus:outline-none"
+                      className="w-full p-4 border border-gray-200 rounded-xl font-mono text-sm text-gray-700 bg-gray-50/50 shadow-inner focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] focus:outline-none transition-all"
                     />
                   ) : (
-                    <div className="p-5 bg-white border border-gray-100 rounded-xl shadow-sm max-h-72 overflow-y-auto">
+                    <div className="p-5 bg-gray-50/50 border border-gray-100 rounded-2xl shadow-sm max-h-72 overflow-y-auto custom-scrollbar">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           table: ({ node, ...props }) => <table className="markdown-table" {...props} />,
-                          a: ({ node, ...props }) => <a className="text-[#FF5A5F] hover:underline" {...props} />
+                          a: ({ node, ...props }) => <a className="text-[#FF5A5F] font-medium hover:underline hover:text-[#FF385C] transition-colors" {...props} />,
+                          p: ({ node, ...props }) => <p className="text-gray-700 leading-relaxed mb-4 last:mb-0" {...props} />
                         }}
                       >
                         {card.selectedText}
@@ -159,13 +195,13 @@ const FlashcardManager = () => {
               <div className="flex md:flex-col gap-2 shrink-0">
                 {editingId === card._id ? (
                   <>
-                    <button onClick={() => saveEdit(card._id)} className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition"><Save className="w-5 h-5" /></button>
-                    <button onClick={() => setEditingId(null)} className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition"><X className="w-5 h-5" /></button>
+                    <button onClick={() => saveEdit(card._id)} className="p-2 text-gray-400 hover:text-green-600 transition-colors"><Save className="w-5 h-5" /></button>
+                    <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:text-gray-900 transition-colors"><X className="w-5 h-5" /></button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => startEditing(card)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition"><Pencil className="w-5 h-5" /></button>
-                    <button onClick={() => handleDelete(card._id)} className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"><Trash2 className="w-5 h-5" /></button>
+                    <button onClick={() => startEditing(card)} className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Pencil className="w-5 h-5" /></button>
+                    <button onClick={() => handleDelete(card._id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors"><Trash2 className="w-5 h-5" /></button>
                   </>
                 )}
               </div>
