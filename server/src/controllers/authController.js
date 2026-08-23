@@ -56,6 +56,7 @@ export const logoutUser = async (req, res) => {
   });
   res.cookie('refreshToken', '', {
     httpOnly: true,
+    path: '/api/auth/refresh',
     expires: new Date(0)
   });
   res.status(STATUS_CODES.OK).json({ message: 'Logged out successfully' });

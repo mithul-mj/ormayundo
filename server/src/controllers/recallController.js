@@ -117,3 +117,11 @@ export const deleteRecallItem = async (req, res) => {
 
   res.status(STATUS_CODES.OK).json({ message: 'Recall item deleted successfully' });
 };
+
+// @desc    Delete all recall items for a user
+// @route   DELETE /api/recall/all
+// @access  Private
+export const deleteAllRecallItems = async (req, res) => {
+  await RecallItem.deleteMany({ userId: req.user._id });
+  res.status(STATUS_CODES.OK).json({ message: 'All recall items wiped successfully' });
+};

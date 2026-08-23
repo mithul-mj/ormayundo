@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Brain, CheckCircle, Clock, Trash2 } from 'lucide-react';
-
-import { API_URL } from '../config';
-
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true
-});
+import { Brain, CheckCircle, Clock, Trash2, Bomb } from 'lucide-react';
+import api from '../api';
 
 const Dashboard = ({ user }) => {
   const [dueCards, setDueCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState({ show: false, type: null }); // 'single' | 'all'
 
   useEffect(() => {
     fetchDueCards();
@@ -43,18 +37,36 @@ const Dashboard = ({ user }) => {
     }
   };
 
-  const handleDelete = async (e) => {
-    e.stopPropagation(); // Prevent flipping the card
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    setDeleteModal({ show: true, type: 'single' });
+  };
+
+  const confirmDeleteSingle = async () => {
     const card = dueCards[currentCardIndex];
-    if (window.confirm("Are you sure you want to delete this flashcard?")) {
-      try {
-        await api.delete(`/recall/${card._id}`);
-        // Remove from local array without incrementing index (so the next card slides into this index)
-        setDueCards((prev) => prev.filter((_, idx) => idx !== currentCardIndex));
-        setIsFlipped(false);
-      } catch (error) {
-        console.error('Failed to delete card:', error);
-      }
+    try {
+      await api.delete(`/recall/${card._id}`);
+      setDueCards((prev) => prev.filter((_, idx) => idx !== currentCardIndex));
+      setIsFlipped(false);
+      setDeleteModal({ show: false, type: null });
+    } catch (error) {
+      console.error('Failed to delete card:', error);
+    }
+  };
+
+  const handleDeleteAll = (e) => {
+    e.stopPropagation();
+    setDeleteModal({ show: true, type: 'all' });
+  };
+
+  const confirmDeleteAll = async () => {
+    try {
+      await api.delete('/recall/all');
+      setDueCards([]);
+      setIsFlipped(false);
+      setDeleteModal({ show: false, type: null });
+    } catch (error) {
+      console.error('Failed to delete all cards:', error);
     }
   };
 
@@ -76,7 +88,44 @@ const Dashboard = ({ user }) => {
   const currentCard = dueCards[currentCardIndex];
 
   return (
-    <div className="p-6 flex flex-col items-center">
+    <div className="relative p-6 flex flex-col items-center min-h-screen">
+      {/* Custom Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {deleteModal.type === 'all' ? 'Wipe All Flashcards?' : 'Delete Flashcard?'}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {deleteModal.type === 'all' 
+                ? 'Are you sure you want to completely wipe all your flashcards? This cannot be undone.' 
+                : 'Are you sure you want to delete this flashcard?'}
+            </p>
+            <div className="flex w-full gap-3">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setDeleteModal({ show: false, type: null }); }}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (deleteModal.type === 'all') confirmDeleteAll();
+                  else confirmDeleteSingle();
+                }}
+                className="flex-1 px-4 py-2 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-colors shadow-sm shadow-red-200"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full flex justify-between items-center mb-6">
         <div className="flex flex-col">
           <h2 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -104,6 +153,13 @@ const Dashboard = ({ user }) => {
             title="Delete Flashcard"
           >
             <Trash2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleDeleteAll}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Wipe All Flashcards"
+          >
+            <Bomb className="w-4 h-4" />
           </button>
         </div>
       </div>

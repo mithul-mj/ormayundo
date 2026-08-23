@@ -16,6 +16,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
+// Custom fetch wrapper to handle 401 Unauthorized and refresh the token
+async function fetchWithAuth(url, options) {
+  let response = await fetch(url, options);
+
+  if (response.status === 401) {
+    console.log('[background.js] 401 Unauthorized. Attempting to refresh token...');
+    // Attempt to hit the refresh endpoint
+    const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+
+    if (refreshResponse.ok) {
+      console.log('[background.js] Token refreshed successfully! Retrying original request...');
+      // Retry the original request
+      response = await fetch(url, options);
+    } else {
+      console.error('[background.js] Refresh token failed. User must log in manually.');
+    }
+  }
+
+  return response;
+}
+
 // Listen for Push Notifications from the backend
 onBackgroundMessage(messaging, (payload) => {
   console.log('[background.js] Received Firebase push message', payload);
@@ -54,7 +78,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     (async () => {
       try {
-        const response = await fetch('https://ormayundo.onrender.com/api/recall', {
+        const response = await fetchWithAuth(`${API_URL}/recall`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -87,7 +111,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     (async () => {
       try {
-        const response = await fetch('https://ormayundo.onrender.com/api/recall', {
+        const response = await fetchWithAuth(`${API_URL}/recall`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

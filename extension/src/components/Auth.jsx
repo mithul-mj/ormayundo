@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Loader2 } from 'lucide-react';
-import axios from 'axios';
-
-import { API_URL } from '../config';
-
-const API = axios.create({
-  baseURL: API_URL,
-  withCredentials: true 
-});
+import api from '../api';
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,7 +21,7 @@ export default function Auth({ onLoginSuccess }) {
     setLoading(true);
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      const { data } = await API.post(endpoint, { email, password });
+      const { data } = await api.post(endpoint, { email, password });
       onLoginSuccess(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
