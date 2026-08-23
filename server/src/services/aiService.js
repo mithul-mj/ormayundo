@@ -1,25 +1,12 @@
 import Groq from 'groq-sdk';
+import { FLASHCARD_GENERATION_PROMPT } from '../utils/prompts.js';
+
 const groq = new Groq({
   apiKey: process.env.AI_API_KEY
 });
 
 export const generateRecallQuestion = async (selectedText) => {
-  const prompt = `
-    You are an expert learning assistant specializing in active recall.
-    Your task is to create exactly ONE high-quality active-recall question from the provided text.
-    
-    Rules:
-    1. Generate exactly one question.
-    2. The question must test the most important information in the text.
-    3. Do not create yes/no questions.
-    4. Return ONLY a valid JSON object in this exact format:
-    {
-      "question": "string"
-    }
-
-    Text:
-    "${selectedText}"
-  `;
+  const prompt = FLASHCARD_GENERATION_PROMPT.replace('{{DATA}}', selectedText);
 
   try {
     console.log('[AI] Sending request to Groq...');

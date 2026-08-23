@@ -1,14 +1,58 @@
 let floatingBtn = null;
 
+function getExtractedText(selection) {
+  if (!selection || selection.rangeCount === 0) return "";
+
+  const rawText = selection.toString().trim();
+
+  const container = document.createElement("div");
+  container.appendChild(selection.getRangeAt(0).cloneContents());
+
+  const tables = container.querySelectorAll("table");
+  if (tables.length === 0) return rawText;
+
+  let markdownTables = "";
+  tables.forEach(table => {
+    const rows = table.querySelectorAll("tr");
+    rows.forEach((row, rowIndex) => {
+      const cells = Array.from(row.querySelectorAll("th, td"));
+      // Extract text and remove newlines/pipes to prevent breaking the markdown table
+      const rowData = cells.map(cell => (cell.innerText || cell.textContent).replace(/(\r\n|\n|\r|\|)/gm, " ").trim());
+
+      markdownTables += "| " + rowData.join(" | ") + " |\n";
+
+      // Add markdown header separator after the first row
+      if (rowIndex === 0) {
+        const separator = cells.map(() => "---");
+        markdownTables += "| " + separator.join(" | ") + " |\n";
+      }
+    });
+    markdownTables += "\n";
+
+    // Remove the table from the container to prevent duplicating text
+    table.remove();
+  });
+
+  // Get whatever non-table text the user also highlighted
+  const remainingText = (container.innerText || container.textContent).trim();
+
+  if (remainingText.length > 0) {
+    return remainingText + "\n\n--- Structured Table Data ---\n\n" + markdownTables;
+  }
+
+  // If the user ONLY highlighted a table, just return the beautifully formatted markdown!
+  return markdownTables.trim();
+}
+
 document.addEventListener('mouseup', (e) => {
   const selection = window.getSelection();
-  const selectedText = selection.toString().trim();
+  const selectedText = getExtractedText(selection);
 
   // If a button already exists, remove it
   if (floatingBtn) {
     // If the user clicked inside the button itself, do nothing
     if (floatingBtn.contains(e.target)) return;
-    
+
     document.body.removeChild(floatingBtn);
     floatingBtn = null;
   }
@@ -34,7 +78,7 @@ document.addEventListener('mouseup', (e) => {
 
     // Prevent the selection from disappearing when clicking the button
     floatingBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault(); 
+      e.preventDefault();
     });
 
     // Handle the click
@@ -44,14 +88,14 @@ document.addEventListener('mouseup', (e) => {
       floatingBtn.style.backgroundColor = '#00C853';
       floatingBtn.style.transform = 'translateX(-50%) scale(1.05)';
       floatingBtn.style.pointerEvents = 'none'; // Prevent double clicking
-      
+
       // Send message to background script to make the API call silently
       chrome.runtime.sendMessage({
         action: 'SAVE_FLASHCARD',
         text: selectedText,
         url: window.location.href
       });
-      
+
       // Remove button instantly after 1 second so user can keep reading
       setTimeout(() => {
         if (floatingBtn && floatingBtn.parentNode) {
