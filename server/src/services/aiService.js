@@ -24,15 +24,19 @@ export const generateRecallQuestion = async (selectedText) => {
   try {
     console.log('[AI] Sending request to Groq...');
 
-    // Set a 30 second timeout for the API call to give Qwen enough time
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'qwen/qwen3.6-27b',
-      temperature: 0.3,
-      response_format: { type: 'json_object' }
+      model: 'openai/gpt-oss-120b',
+      temperature: 1,
+      max_completion_tokens: 2048,
+      top_p: 1,
+      reasoning_effort: 'medium',
+      stream: false,
+      response_format: { type: 'json_object' },
+      stop: null
     }, { signal: controller.signal });
 
     clearTimeout(timeoutId);

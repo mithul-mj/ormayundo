@@ -17,18 +17,26 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
   console.log(`[BullMQ] Text: "${selectedText.substring(0, 40)}..."`);
 
   // 1. Call AI
-  const question = await generateRecallQuestion(selectedText);
+  console.log(`[BullMQ] Starting AI Generation...`);
+  try {
+    const question = await generateRecallQuestion(selectedText);
+    console.log(`[BullMQ] AI Generation successful: "${question}"`);
 
-  // 2. Save to DB
-  await RecallItem.create({
-    userId,
-    selectedText,
-    question,
-    sourceUrl
-  });
+    // 2. Save to DB
+    console.log(`[BullMQ] Saving to MongoDB...`);
+    const newItem = await RecallItem.create({
+      userId,
+      selectedText,
+      question,
+      sourceUrl
+    });
+    console.log(`[BullMQ] Successfully created MongoDB document with ID: ${newItem._id}`);
 
-  console.log(`[BullMQ] Successfully completed job ${job.id}`);
-  return { success: true };
+    return { success: true, id: newItem._id };
+  } catch (error) {
+    console.error(`[BullMQ] Fatal Error during job processing:`, error);
+    throw error;
+  }
 }, {
   connection: redisConnection,
   concurrency: 5 // Process up to 5 AI requests in parallel to prevent memory leaks
