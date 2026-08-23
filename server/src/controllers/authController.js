@@ -3,47 +3,57 @@ import generateTokens from '../utils/generateTokens.js';
 import jwt from 'jsonwebtoken';
 import { STATUS_CODES } from '../utils/statusCodes.js';
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-export const registerUser = async (req, res) => {
-  const { email, password } = req.body;
+import axios from 'axios';
 
-  const userExists = await User.findOne({ email });
-  if (userExists) {
+// @desc    Auth user using Google Access Token
+// @route   POST /api/auth/google
+export const googleAuth = async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
     res.status(STATUS_CODES.BAD_REQUEST);
-    throw new Error('User already exists');
+    throw new Error('No Google token provided');
   }
 
-  const user = await User.create({ email, password });
+  try {
+    let email;
 
-  generateTokens(res, user._id);
-  
-  res.status(STATUS_CODES.CREATED).json({
-    _id: user._id,
-    email: user.email,
-    message: 'Registration successful'
-  });
-};
+    // Check if it is a JWT (ID Token from Web) or an Access Token (from Extension)
+    if (token.startsWith('eyJ')) {
+      // It's an ID Token (JWT) from @react-oauth/google
+      const googleResponse = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+      email = googleResponse.data.email;
+    } else {
+      // It's an Access Token from chrome.identity
+      const googleResponse = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`);
+      email = googleResponse.data.email;
+    }
 
-// @desc    Auth user & get token (Login)
-// @route   POST /api/auth/login
-export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+    if (!email) {
+      res.status(STATUS_CODES.BAD_REQUEST);
+      throw new Error('Failed to get email from Google');
+    }
 
-  // We explicitly select +password because it is hidden by default in the schema
-  const user = await User.findOne({ email }).select('+password');
+    // 2. Find or create the user in our database
+    let user = await User.findOne({ email });
 
-  if (user && (await user.matchPassword(password))) {
+    if (!user) {
+      // Create new user (no password required for OAuth users)
+      user = await User.create({ email });
+    }
+
+    // 3. Generate our internal JWT for sessions
     generateTokens(res, user._id);
     
     res.status(STATUS_CODES.OK).json({
       _id: user._id,
       email: user.email,
-      message: 'Login successful'
+      message: 'Google Login successful'
     });
-  } else {
+  } catch (error) {
+    console.error('Google Auth Error:', error.message);
     res.status(STATUS_CODES.UNAUTHORIZED);
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid Google token');
   }
 };
 

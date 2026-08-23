@@ -125,3 +125,33 @@ export const deleteAllRecallItems = async (req, res) => {
   await RecallItem.deleteMany({ userId: req.user._id });
   res.status(STATUS_CODES.OK).json({ message: 'All recall items wiped successfully' });
 };
+
+// @desc    Get all recall items (for Manager view)
+// @route   GET /api/recall
+// @access  Private
+export const getAllItems = async (req, res) => {
+  const items = await RecallItem.find({ userId: req.user._id }).sort({ createdAt: -1 });
+  res.status(STATUS_CODES.OK).json(items);
+};
+
+// @desc    Edit a recall item (Question/Answer)
+// @route   PUT /api/recall/:id
+// @access  Private
+export const editRecallItem = async (req, res) => {
+  const { question, selectedText } = req.body;
+  const recallId = req.params.id;
+
+  const item = await RecallItem.findOne({ _id: recallId, userId: req.user._id });
+
+  if (!item) {
+    res.status(STATUS_CODES.NOT_FOUND);
+    throw new Error('Recall item not found');
+  }
+
+  if (question) item.question = question;
+  if (selectedText) item.selectedText = selectedText;
+
+  await item.save();
+
+  res.status(STATUS_CODES.OK).json(item);
+};

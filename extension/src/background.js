@@ -62,30 +62,48 @@ onBackgroundMessage(messaging, (payload) => {
 // Create the right-click menu when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
+    id: "save-table",
+    title: "Save Table to Ormayundo",
+    contexts: ["all"]
+  });
+
+  chrome.contextMenus.create({
     id: "save-to-ormayundo",
-    title: "Save to Ormayundo",
+    title: "Save Highlight to Ormayundo",
     contexts: ["selection"]
   });
 });
 
 // Listen for clicks on the right-click menu
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "save-to-ormayundo" && info.selectionText) {
-    console.log('[background.js] Right-click menu clicked! Saving text:', info.selectionText);
+  if (info.menuItemId === "save-table" || info.menuItemId === "save-to-ormayundo") {
 
-    chrome.action.setBadgeText({ text: '...' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+    // Ask the content script on the active tab for the Markdown text
+    chrome.tabs.sendMessage(tab.id, {
+      action: info.menuItemId === "save-table" ? 'EXTRACT_CLICKED_TABLE' : 'EXTRACT_SELECTION'
+    }, async (response) => {
 
-    (async () => {
+      if (chrome.runtime.lastError || !response || response.error) {
+        console.error('[background.js] Error from content script:', chrome.runtime.lastError || response?.error);
+        chrome.action.setBadgeText({ text: 'X' });
+        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+        return;
+      }
+
+      console.log('[background.js] Right-click menu clicked! Saving text:', response.text);
+      chrome.action.setBadgeText({ text: '...' });
+      chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+
       try {
-        const response = await fetchWithAuth(`${API_URL}/recall`, {
+        const res = await fetchWithAuth(`${API_URL}/recall`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ selectedText: info.selectionText, sourceUrl: tab.url })
+          body: JSON.stringify({ selectedText: response.text, sourceUrl: tab.url })
         });
 
-        if (!response.ok) throw new Error('Server returned ' + response.status);
+        if (!res.ok) throw new Error('Server returned ' + res.status);
 
         console.log('[background.js] Successfully saved to backend!');
         chrome.action.setBadgeText({ text: '✓' });
@@ -97,7 +115,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
       }
-    })();
+    });
   }
 });
 

@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --color-brand: #FF5A5F;
+  --color-brand-dark: #FF385C;
+}
+
+body {
+  margin: 0;
+  background-color: #f9fafb;
+  font-family: "Inter", sans-serif;
+}
+
+/* Beautiful Markdown Tables for Flashcards */
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.markdown-table th, .markdown-table td {
+  border: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.markdown-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.markdown-table tr:nth-child(even) {
+  background-color: #f9fafb;
+}

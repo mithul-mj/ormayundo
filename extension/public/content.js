@@ -5,42 +5,58 @@ function getExtractedText(selection) {
 
   const rawText = selection.toString().trim();
 
-  const container = document.createElement("div");
-  container.appendChild(selection.getRangeAt(0).cloneContents());
+  // 1. Find ALL real tables on the actual webpage that intersect with the user's highlight
+  const intersectedTables = new Set();
 
-  const tables = container.querySelectorAll("table");
-  if (tables.length === 0) return rawText;
+  // Check start and end of selection (handles cases where selection is entirely inside one cell)
+  const anchorTable = selection.anchorNode?.nodeType === 1 ? selection.anchorNode.closest("table") : selection.anchorNode?.parentElement?.closest("table");
+  if (anchorTable) intersectedTables.add(anchorTable);
 
+  const focusTable = selection.focusNode?.nodeType === 1 ? selection.focusNode.closest("table") : selection.focusNode?.parentElement?.closest("table");
+  if (focusTable) intersectedTables.add(focusTable);
+
+  // Check all tables to see if the highlight passed through them
+  document.querySelectorAll("table").forEach(table => {
+    if (selection.containsNode(table, true)) {
+      intersectedTables.add(table);
+    }
+  });
+
+  // If no tables were touched, return normal text
+  if (intersectedTables.size === 0) return rawText;
+
+  // 2. We found tables! Generate beautiful Markdown for the FULL tables (not just the highlighted half)
   let markdownTables = "";
-  tables.forEach(table => {
+  intersectedTables.forEach(table => {
     const rows = table.querySelectorAll("tr");
     rows.forEach((row, rowIndex) => {
       const cells = Array.from(row.querySelectorAll("th, td"));
-      // Extract text and remove newlines/pipes to prevent breaking the markdown table
       const rowData = cells.map(cell => (cell.innerText || cell.textContent).replace(/(\r\n|\n|\r|\|)/gm, " ").trim());
 
       markdownTables += "| " + rowData.join(" | ") + " |\n";
 
-      // Add markdown header separator after the first row
       if (rowIndex === 0) {
         const separator = cells.map(() => "---");
         markdownTables += "| " + separator.join(" | ") + " |\n";
       }
     });
     markdownTables += "\n";
-
-    // Remove the table from the container to prevent duplicating text
-    table.remove();
   });
 
-  // Get whatever non-table text the user also highlighted
+  // 3. Did the user highlight paragraphs OUTSIDE the table?
+  // We clone the highlight, forcefully delete all table fragments from the clone, and see what's left.
+  const container = document.createElement("div");
+  container.appendChild(selection.getRangeAt(0).cloneContents());
+  container.querySelectorAll("table").forEach(t => t.remove());
+
   const remainingText = (container.innerText || container.textContent).trim();
 
+  // If they highlighted outside text, include it alongside the full tables!
   if (remainingText.length > 0) {
-    return remainingText + "\n\n--- Structured Table Data ---\n\n" + markdownTables;
+    return remainingText + "\n\n" + markdownTables.trim();
   }
 
-  // If the user ONLY highlighted a table, just return the beautifully formatted markdown!
+  // If they ONLY highlighted half a table, discard the messy half and return the FULL perfect Markdown table!
   return markdownTables.trim();
 }
 
@@ -109,5 +125,53 @@ document.addEventListener('mouseup', (e) => {
     });
 
     document.body.appendChild(floatingBtn);
+  }
+});
+
+// --- RIGHT CLICK TABLE EXTRACTION ---
+let lastRightClickedElement = null;
+
+// Track what the user right-clicks on
+document.addEventListener("contextmenu", (event) => {
+  lastRightClickedElement = event.target;
+}, true);
+
+// Listen for the background script asking for the table
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'EXTRACT_CLICKED_TABLE') {
+    if (!lastRightClickedElement) {
+      sendResponse({ error: "No element clicked." });
+      return;
+    }
+
+    // Find the closest table to where the user clicked
+    const table = lastRightClickedElement.closest("table");
+
+    if (!table) {
+      sendResponse({ error: "You didn't click inside a table!" });
+      return;
+    }
+
+    // Convert the exact clicked table to Markdown!
+    let markdownTables = "";
+    const rows = table.querySelectorAll("tr");
+    rows.forEach((row, rowIndex) => {
+      const cells = Array.from(row.querySelectorAll("th, td"));
+      const rowData = cells.map(cell => (cell.innerText || cell.textContent).replace(/(\r\n|\n|\r|\|)/gm, " ").trim());
+
+      markdownTables += "| " + rowData.join(" | ") + " |\n";
+
+      if (rowIndex === 0) {
+        const separator = cells.map(() => "---");
+        markdownTables += "| " + separator.join(" | ") + " |\n";
+      }
+    });
+
+    sendResponse({ text: markdownTables.trim() });
+  }
+
+  if (request.action === 'EXTRACT_SELECTION') {
+    const selection = window.getSelection();
+    sendResponse({ text: getExtractedText(selection) });
   }
 });
