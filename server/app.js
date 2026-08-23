@@ -23,6 +23,11 @@ app.get('/', (req, res) => {
   res.send('Ormayundo API is running...');
 });
 
+// Endpoint for cron-job.org / UptimeRobot to keep Render backend alive
+app.get('/api/ping', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/recall', recallRoutes);
 
