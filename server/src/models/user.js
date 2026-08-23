@@ -14,6 +14,17 @@ const userSchema = new mongoose.Schema({
     },
     fcmToken: {
         type: String
+    },
+    currentStreak: {
+        type: Number,
+        default: 0
+    },
+    maxStreak: {
+        type: Number,
+        default: 0
+    },
+    lastAddedDate: {
+        type: Date
     }
 }, { timestamps: true });
 

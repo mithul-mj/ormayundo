@@ -51,7 +51,7 @@ function App() {
   const syncFcmToken = async () => {
     try {
       console.log("Generating FCM Token...");
-      
+
       // In Chrome Extensions, we must pass the existing background service worker registration!
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
@@ -109,7 +109,14 @@ function App() {
 
       {/* Minimalist Header */}
       <header className="flex items-center justify-between p-4 border-b border-gray-100">
-        <h1 className="font-bold text-xl tracking-tight text-brand">Ormayundo.</h1>
+        <a
+          href="https://ormayundo-woad.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-xl tracking-tight text-brand hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          Ormayundo.
+        </a>
         {user && (
           <span onClick={handleLogout} className="text-xs font-semibold text-gray-400 hover:text-brand cursor-pointer">
             Logout

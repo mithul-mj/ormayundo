@@ -78,6 +78,21 @@ export const getAnalytics = async (req, res) => {
     
     const workloadData = Object.keys(upcoming).map(day => ({ day, count: upcoming[day] }));
 
+    // Read optimized Streak from Database
+    const nowStreak = new Date();
+    const todayStr = nowStreak.toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
+    
+    // If the last added date is older than yesterday, their streak is broken (0)
+    let displayStreak = req.user.currentStreak || 0;
+    if (lastAddedStr !== todayStr && lastAddedStr !== yesterdayStr) {
+      displayStreak = 0;
+    }
+
     res.json({
       mastery: [
         { name: 'New', value: newCards, fill: '#3b82f6' },
@@ -88,7 +103,9 @@ export const getAnalytics = async (req, res) => {
       heatmap: heatmapData,
       retentionRate,
       workload: workloadData,
-      totalCards: cards.length
+      totalCards: cards.length,
+      additionStreak: displayStreak,
+      maxStreak: req.user.maxStreak || 0
     });
 
   } catch (error) {

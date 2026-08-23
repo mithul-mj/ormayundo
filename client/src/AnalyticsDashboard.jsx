@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Calendar, Target, Globe, Activity, Loader2 } from 'lucide-react';
+import { Brain, Calendar, Target, Globe, Activity, Loader2, Flame } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
@@ -47,6 +47,22 @@ const AnalyticsDashboard = () => {
             <p className="text-gray-500 mt-1">Total Flashcards: {data.totalCards}</p>
           </div>
           <div className="flex gap-4">
+            
+            {/* Streak Card */}
+            <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
+                <Flame className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Creation Streak</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xl font-bold text-gray-800">{data.additionStreak}</p>
+                  <span className="text-xs font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">Max {data.maxStreak}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Retention Card */}
             <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg text-green-600">
                 <Target className="w-5 h-5" />
@@ -56,6 +72,7 @@ const AnalyticsDashboard = () => {
                 <p className="text-xl font-bold text-gray-800">{data.retentionRate}%</p>
               </div>
             </div>
+
           </div>
         </div>
 

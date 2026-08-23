@@ -20,6 +20,30 @@ export const createRecallItem = async (req, res) => {
 
   console.log(`[Backend] Received text to save: "${selectedText?.substring(0, 30)}..." for user ${userId}`);
 
+  // Optimize: Update Streak in Database
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
+
+  if (lastAddedStr !== todayStr) {
+    if (lastAddedStr === yesterdayStr) {
+      req.user.currentStreak = (req.user.currentStreak || 0) + 1;
+    } else {
+      req.user.currentStreak = 1;
+    }
+    
+    if (req.user.currentStreak > (req.user.maxStreak || 0)) {
+      req.user.maxStreak = req.user.currentStreak;
+    }
+    
+    req.user.lastAddedDate = now;
+    await req.user.save();
+  }
+
   // 1. Add the job to the BullMQ Queue safely
   try {
     const job = await aiQueue.add(JOB_NAMES.GENERATE_FLASHCARD, {
