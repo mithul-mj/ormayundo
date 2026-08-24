@@ -103,12 +103,13 @@ export const getAnalytics = async (req, res) => {
     }
 
     // 🚀 OPTIMIZATION: MongoDB Aggregation Pipeline for Time of Day Accuracy
+    const userTimezone = req.query.timezone || "UTC";
     const timeAggregation = await RecallItem.aggregate([
       { $match: { userId: req.user._id } },
       { $unwind: "$reviewHistory" },
       {
         $project: {
-          hour: { $hour: "$reviewHistory.reviewedAt" },
+          hour: { $hour: { date: "$reviewHistory.reviewedAt", timezone: userTimezone } },
           isCorrect: {
             $in: ["$reviewHistory.rating", ["good", "easy"]]
           }

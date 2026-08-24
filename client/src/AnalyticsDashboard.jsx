@@ -15,7 +15,8 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await axios.get(`${API_URL}/analytics`, { withCredentials: true });
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const response = await axios.get(`${API_URL}/analytics?timezone=${timezone}`, { withCredentials: true });
         setData(response.data);
         setLoading(false);
       } catch (error) {
