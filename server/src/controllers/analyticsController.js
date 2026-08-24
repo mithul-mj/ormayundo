@@ -8,16 +8,16 @@ export const getAnalytics = async (req, res) => {
     let newCards = 0;
     let learningCards = 0;
     let masteredCards = 0;
-    
+
     const sources = {};
     const heatmap = {};
-    
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     let totalReviews = 0;
     let hardForgotCount = 0;
-    
+
     const upcoming = {
       'Today': 0,
       'Tomorrow': 0,
@@ -25,14 +25,14 @@ export const getAnalytics = async (req, res) => {
       'Next Week': 0,
       'Later': 0
     };
-    
+
     const timeBuckets = {
       Morning: { total: 0, correct: 0 },    // 5 AM - 12 PM
       Afternoon: { total: 0, correct: 0 },  // 12 PM - 5 PM
       Evening: { total: 0, correct: 0 },    // 5 PM - 9 PM
       Night: { total: 0, correct: 0 }       // 9 PM - 5 AM
     };
-    
+
     const now = new Date();
     const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
     const threeDays = new Date(now); threeDays.setDate(threeDays.getDate() + 3);
@@ -42,33 +42,33 @@ export const getAnalytics = async (req, res) => {
       // 1. Mastery Breakdown
       if (card.reviewCount <= 1) newCards++;
       else {
-         const interval = card.lastReviewedAt ? (card.nextReviewAt - card.lastReviewedAt) / (1000 * 60 * 60 * 24) : 0;
-         if (interval > 21) masteredCards++;
-         else learningCards++;
+        const interval = card.lastReviewedAt ? (card.nextReviewAt - card.lastReviewedAt) / (1000 * 60 * 60 * 24) : 0;
+        if (interval > 21) masteredCards++;
+        else learningCards++;
       }
-      
+
       // 2. Top Sources
       if (card.sourceUrl) {
-         try {
-           const url = new URL(card.sourceUrl);
-           const domain = url.hostname.replace('www.', '');
-           sources[domain] = (sources[domain] || 0) + 1;
-         } catch(e) {}
+        try {
+          const url = new URL(card.sourceUrl);
+          const domain = url.hostname.replace('www.', '');
+          sources[domain] = (sources[domain] || 0) + 1;
+        } catch (e) { }
       }
-      
+
       // 3 & 4. Heatmap & Retention
       card.reviewHistory.forEach(history => {
-         if (history.reviewedAt >= thirtyDaysAgo) {
-            const dateKey = history.reviewedAt.toISOString().split('T')[0];
-            heatmap[dateKey] = (heatmap[dateKey] || 0) + 1;
-         }
-         
-         totalReviews++;
-         if (history.rating === 'hard' || history.rating === 'forgot') {
-            hardForgotCount++;
-         }
+        if (history.reviewedAt >= thirtyDaysAgo) {
+          const dateKey = history.reviewedAt.toISOString().split('T')[0];
+          heatmap[dateKey] = (heatmap[dateKey] || 0) + 1;
+        }
+
+        totalReviews++;
+        if (history.rating === 'hard' || history.rating === 'forgot') {
+          hardForgotCount++;
+        }
       });
-      
+
       // 5. Workload
       if (card.nextReviewAt <= now) upcoming['Today']++;
       else if (card.nextReviewAt <= tomorrow) upcoming['Tomorrow']++;
@@ -78,13 +78,13 @@ export const getAnalytics = async (req, res) => {
     });
 
     const topSources = Object.keys(sources).map(domain => ({ domain, count: sources[domain] }))
-         .sort((a,b) => b.count - a.count).slice(0, 5);
-         
+      .sort((a, b) => b.count - a.count).slice(0, 5);
+
     const heatmapData = Object.keys(heatmap).map(date => ({ date, count: heatmap[date] }))
-         .sort((a,b) => new Date(a.date) - new Date(b.date));
-    
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
     const retentionRate = totalReviews > 0 ? Math.round(((totalReviews - hardForgotCount) / totalReviews) * 100) : 100;
-    
+
     const workloadData = Object.keys(upcoming).map(day => ({ day, count: upcoming[day] }));
 
     // Read optimized Streak from Database
@@ -93,9 +93,9 @@ export const getAnalytics = async (req, res) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+
     const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
-    
+
     // If the last added date is older than yesterday, their streak is broken (0)
     let displayStreak = req.user.currentStreak || 0;
     if (lastAddedStr !== todayStr && lastAddedStr !== yesterdayStr) {
@@ -106,11 +106,11 @@ export const getAnalytics = async (req, res) => {
     const timeAggregation = await RecallItem.aggregate([
       { $match: { userId: req.user._id } },
       { $unwind: "$reviewHistory" },
-      { 
+      {
         $project: {
           hour: { $hour: "$reviewHistory.reviewedAt" },
-          isCorrect: { 
-            $in: ["$reviewHistory.rating", ["good", "easy"]] 
+          isCorrect: {
+            $in: ["$reviewHistory.rating", ["good", "easy"]]
           }
         }
       },
@@ -119,9 +119,9 @@ export const getAnalytics = async (req, res) => {
           timeBucket: {
             $switch: {
               branches: [
-                { case: { $and: [ { $gte: ["$hour", 5] }, { $lt: ["$hour", 12] } ] }, then: "Morning" },
-                { case: { $and: [ { $gte: ["$hour", 12] }, { $lt: ["$hour", 17] } ] }, then: "Afternoon" },
-                { case: { $and: [ { $gte: ["$hour", 17] }, { $lt: ["$hour", 21] } ] }, then: "Evening" }
+                { case: { $and: [{ $gte: ["$hour", 5] }, { $lt: ["$hour", 12] }] }, then: "Morning" },
+                { case: { $and: [{ $gte: ["$hour", 12] }, { $lt: ["$hour", 17] }] }, then: "Afternoon" },
+                { case: { $and: [{ $gte: ["$hour", 17] }, { $lt: ["$hour", 21] }] }, then: "Evening" }
               ],
               default: "Night"
             }

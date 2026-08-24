@@ -57,21 +57,7 @@ const Dashboard = ({ user }) => {
     }
   };
 
-  const handleDeleteAll = (e) => {
-    e.stopPropagation();
-    setDeleteModal({ show: true, type: 'all' });
-  };
 
-  const confirmDeleteAll = async () => {
-    try {
-      await api.delete('/recall/all');
-      setDueCards([]);
-      setIsFlipped(false);
-      setDeleteModal({ show: false, type: null });
-    } catch (error) {
-      console.error('Failed to delete all cards:', error);
-    }
-  };
 
   if (loading) {
     return <div className="p-8 text-center text-gray-500">Checking your memory bank...</div>;
@@ -187,13 +173,6 @@ const Dashboard = ({ user }) => {
             title="Delete Flashcard"
           >
             <Trash2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleDeleteAll}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            title="Wipe All Flashcards"
-          >
-            <Bomb className="w-4 h-4" />
           </button>
         </div>
       </div>
