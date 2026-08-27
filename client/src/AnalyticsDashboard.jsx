@@ -42,35 +42,57 @@ const AnalyticsDashboard = () => {
       <div className="max-w-6xl mx-auto space-y-8">
 
         {/* Header section */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Your Brain Dashboard</h1>
-            <p className="text-gray-500 mt-1">Total Flashcards: {data.totalCards}</p>
+            <p className="text-gray-500 mt-1">Total Flashcards: {data.totalCards || 0}</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
 
             {/* Streak Card */}
-            <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
-              <div className="text-orange-500">
-                <Flame className="w-5 h-5" />
+            <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full blur-2xl"></div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-100 flex items-center justify-center text-orange-500 shadow-sm relative z-10">
+                <Flame className="w-6 h-6 fill-orange-500/20" />
               </div>
-              <div>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Creation Streak</p>
+              <div className="relative z-10">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Creation Streak</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-bold text-gray-800">{data.additionStreak}</p>
-                  <span className="text-xs font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">Max {data.maxStreak}</span>
+                  <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-800 to-gray-600 tracking-tighter">{data.additionStreak || 0}</p>
+                  <span className="text-xs font-bold text-orange-600 bg-orange-100 border border-orange-200/50 px-2 py-0.5 rounded-full shadow-sm">Max {data.maxStreak || 0}</span>
                 </div>
               </div>
             </div>
 
-            {/* Retention Card */}
-            <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
-              <div className="text-green-500">
-                <Target className="w-5 h-5" />
+            {/* Retention Card (Large Typography + Circular Ring) */}
+            <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-[#10b981]/10 to-transparent rounded-full blur-2xl"></div>
+              <div className="relative flex items-center justify-center z-10">
+                <svg width="48" height="48" viewBox="0 0 48 48" className="transform -rotate-90 drop-shadow-sm">
+                  <circle cx="24" cy="24" r="20" stroke="#f3f4f6" strokeWidth="6" fill="transparent" />
+                  <circle
+                    cx="24" cy="24" r="20"
+                    stroke="url(#retentionGradient)"
+                    strokeWidth="6"
+                    fill="transparent"
+                    strokeDasharray="125.6"
+                    strokeDashoffset={125.6 - ((Number(data.retentionRate) || 0) / 100) * 125.6}
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                  <defs>
+                    <linearGradient id="retentionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#059669" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
-              <div>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Retention Rate</p>
-                <p className="text-xl font-bold text-gray-800">{data.retentionRate}%</p>
+              <div className="relative z-10">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Retention Rate</p>
+                <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-800 to-gray-600 tracking-tighter">
+                  {data.retentionRate || 0}<span className="text-xl text-gray-400 font-bold ml-0.5">%</span>
+                </p>
               </div>
             </div>
 
@@ -196,7 +218,14 @@ const AnalyticsDashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} domain={[0, 100]} tickFormatter={(val) => `${val}%`} />
-                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value}%`, 'Accuracy']} />
+                  <Tooltip 
+                    cursor={{ fill: '#F3F4F6' }} 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                    formatter={(value, name, props) => [
+                      `${value}% (${props.payload.correct} / ${props.payload.total} correct)`, 
+                      'Accuracy'
+                    ]} 
+                  />
                   <Bar dataKey="accuracy" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

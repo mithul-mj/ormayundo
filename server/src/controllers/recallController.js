@@ -96,14 +96,18 @@ export const reviewRecallItem = async (req, res) => {
     throw new Error('Recall item not found');
   }
 
-  // 2. Calculate the next review date using our engine
-  const { nextReviewAt, newCorrectCount, intervalDays } = calculateNextReview(
+  // 2. Calculate the next review date using SM-2 engine
+  const { nextReviewAt, newInterval, newRepetitions, newEasinessFactor } = calculateNextReview(
+    item.interval || 0,
     item.correctCount || 0,
+    item.easinessFactor || 2.5,
     rating
   );
 
   // 3. Update the item
-  item.correctCount = newCorrectCount;
+  item.interval = newInterval;
+  item.correctCount = newRepetitions;
+  item.easinessFactor = newEasinessFactor;
   item.nextReviewAt = nextReviewAt;
   item.lastReviewedAt = new Date();
   item.notificationSent = false; // CRITICAL: Reset the memory flag for the next cycle!
@@ -116,7 +120,7 @@ export const reviewRecallItem = async (req, res) => {
   item.reviewHistory.push({
     reviewedAt: new Date(),
     rating,
-    newInterval: intervalDays
+    newInterval
   });
 
   await item.save();

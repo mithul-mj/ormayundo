@@ -4,14 +4,14 @@ export default function Privacy() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full p-10 bg-white shadow-xl rounded-3xl border border-gray-100 text-gray-800">
-        
+
         <div className="text-center mb-10">
           <h1 className="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A5F] to-[#FF385C] tracking-tighter">
             Ormayundo Privacy Policy
           </h1>
           <p className="text-gray-400 font-medium">Effective Date: August 2026</p>
         </div>
-        
+
         <div className="space-y-8 leading-relaxed text-gray-600">
           <section>
             <h2 className="text-2xl font-bold mb-3 text-gray-900 border-b border-gray-100 pb-2">1. Information We Collect</h2>
@@ -47,7 +47,7 @@ export default function Privacy() {
             <p>You have the right to access, modify, or delete your personal data. You can completely revoke access to your Google account at any time via your Google Account security settings.</p>
           </section>
         </div>
-        
+
         <div className="mt-16 pt-8 border-t border-gray-100 text-center">
           <a href="/" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-[#FF5A5F] to-[#FF385C] hover:opacity-90 transition-opacity shadow-md">
             Return to Dashboard

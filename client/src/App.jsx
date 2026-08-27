@@ -48,11 +48,11 @@ function App() {
   return (
     <div className="App min-h-screen flex flex-col">
       <nav className="glass-panel sticky top-0 z-50 shadow-sm border-b border-gray-100/50">
-        <div className="max-w-6xl mx-auto px-8 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 h-auto min-h-[4rem] py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="font-extrabold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A5F] to-[#FF385C] tracking-tighter cursor-default">
             Ormayundo.
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 items-center w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all duration-300 ${activeTab === 'dashboard' ? 'bg-[#FF5A5F]/10 text-[#FF5A5F] shadow-sm' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}

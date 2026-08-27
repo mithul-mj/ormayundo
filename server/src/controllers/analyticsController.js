@@ -143,17 +143,22 @@ export const getAnalytics = async (req, res) => {
     ]);
 
     // Format accuracy by time
-    const accuracyBuckets = { "Morning": 0, "Afternoon": 0, "Evening": 0, "Night": 0 };
+    const accuracyBuckets = { 
+      "Morning": { accuracy: 0, total: 0, correct: 0 }, 
+      "Afternoon": { accuracy: 0, total: 0, correct: 0 }, 
+      "Evening": { accuracy: 0, total: 0, correct: 0 }, 
+      "Night": { accuracy: 0, total: 0, correct: 0 } 
+    };
     timeAggregation.forEach(bucket => {
       const accuracy = bucket.total > 0 ? Math.round((bucket.correct / bucket.total) * 100) : 0;
-      accuracyBuckets[bucket._id] = accuracy;
+      accuracyBuckets[bucket._id] = { accuracy, total: bucket.total, correct: bucket.correct };
     });
 
     const accuracyByTime = [
-      { time: "Morning", accuracy: accuracyBuckets["Morning"] },
-      { time: "Afternoon", accuracy: accuracyBuckets["Afternoon"] },
-      { time: "Evening", accuracy: accuracyBuckets["Evening"] },
-      { time: "Night", accuracy: accuracyBuckets["Night"] }
+      { time: "Morning", ...accuracyBuckets["Morning"] },
+      { time: "Afternoon", ...accuracyBuckets["Afternoon"] },
+      { time: "Evening", ...accuracyBuckets["Evening"] },
+      { time: "Night", ...accuracyBuckets["Night"] }
     ];
 
     res.json({

@@ -1,32 +1,46 @@
-export const calculateNextReview = (currentCorrectCount, rating) => {
-  let newCorrectCount = currentCorrectCount;
-  let intervalMinutes = 1; // Used for testing instead of days
+export const calculateNextReview = (interval, repetitions, easinessFactor, ratingStr) => {
+  // Map our UI ratings to SM-2 grades (0-5)
+  // SM-2 Grades: 5=Perfect, 4=Hesitation, 3=Hard, 2-0=Failed
+  const ratingMap = {
+    forgot: 1,
+    hard: 3,
+    good: 4,
+    easy: 5
+  };
+  const grade = ratingMap[ratingStr] || 1;
 
-  if (rating === 'forgot') {
-    newCorrectCount = 0; // Reset streak
-    intervalMinutes = 1; // See it in 1 minute
-  } else {
-    // If they got it right, increase their streak
-    newCorrectCount += 1;
+  let newInterval = interval;
+  let newRepetitions = repetitions;
+  let newEasinessFactor = easinessFactor;
 
-    // Apply the multiplier based on how easy it was
-    if (rating === 'hard') {
-      newCorrectCount -= 0.5; // Slow down progression
-    } else if (rating === 'easy') {
-      newCorrectCount += 1;   // Speed up progression
+  if (grade >= 3) {
+    // Correct response
+    if (newRepetitions === 0) {
+      newInterval = 1;
+    } else if (newRepetitions === 1) {
+      newInterval = 6;
+    } else {
+      newInterval = Math.round(newInterval * newEasinessFactor);
     }
-
-    // Determine interval based on streak (IN MINUTES FOR TESTING)
-    if (newCorrectCount <= 1) intervalMinutes = 1;
-    else if (newCorrectCount <= 2) intervalMinutes = 3;
-    else if (newCorrectCount <= 3) intervalMinutes = 5;
-    else if (newCorrectCount <= 4) intervalMinutes = 10;
-    else intervalMinutes = 15; // Max out at 15 minutes for testing
+    newRepetitions += 1;
+  } else {
+    // Incorrect response (forgot)
+    newRepetitions = 0;
+    newInterval = 1;
   }
 
-  // Calculate the exact future date by adding minutes instead of days
-  const nextReviewAt = new Date();
-  nextReviewAt.setMinutes(nextReviewAt.getMinutes() + Math.round(intervalMinutes));
+  // Update Easiness Factor (EF)
+  newEasinessFactor = newEasinessFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+  if (newEasinessFactor < 1.3) {
+    newEasinessFactor = 1.3; // EF should never be lower than 1.3
+  }
 
-  return { nextReviewAt, newCorrectCount, intervalDays: intervalMinutes };
+  // Calculate next review date (in days)
+  const nextReviewAt = new Date();
+  nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
+
+  // NOTE: For rapid testing, you can use minutes instead of days by commenting the line above and uncommenting below:
+  // nextReviewAt.setTime(new Date().getTime() + newInterval * 60 * 1000);
+
+  return { nextReviewAt, newInterval, newRepetitions, newEasinessFactor };
 };
