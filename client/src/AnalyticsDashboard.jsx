@@ -7,10 +7,38 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { API_URL } from './config';
+import Confetti from 'react-confetti';
 
 const AnalyticsDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowDimension, setWindowDimension] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  useEffect(() => {
+    const handleResize = () => setWindowDimension({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    let timeoutId;
+    if (data && data.additionStreak > 0) {
+      const milestones = [3, 7, 14, 30, 50, 100, 365];
+      if (milestones.includes(data.additionStreak)) {
+        const lastConfetti = localStorage.getItem('lastConfettiDate');
+        const today = new Date().toISOString().split('T')[0];
+        if (lastConfetti !== today) {
+          setShowConfetti(true);
+          localStorage.setItem('lastConfettiDate', today);
+          timeoutId = setTimeout(() => setShowConfetti(false), 8000); // Stop after 8s
+        }
+      }
+    }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [data]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -39,6 +67,18 @@ const AnalyticsDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
+      {showConfetti && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <Confetti 
+            width={windowDimension.width} 
+            height={windowDimension.height} 
+            recycle={false} 
+            numberOfPieces={600} 
+            gravity={0.12} 
+            colors={['#FF5A5F', '#FF385C', '#ff8a8f', '#ffffff']}
+          />
+        </div>
+      )}
       <div className="max-w-6xl mx-auto space-y-8">
 
         {/* Header section */}
@@ -51,15 +91,15 @@ const AnalyticsDashboard = () => {
 
             {/* Streak Card */}
             <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full blur-2xl"></div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-100 flex items-center justify-center text-orange-500 shadow-sm relative z-10">
-                <Flame className="w-6 h-6 fill-orange-500/20" />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-[#FF5A5F]/15 to-transparent rounded-full blur-2xl"></div>
+              <div className="relative z-10 text-[#FF5A5F]">
+                <Flame className="w-8 h-8 fill-[#FF5A5F]/20 drop-shadow-sm" />
               </div>
               <div className="relative z-10">
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Creation Streak</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-800 to-gray-600 tracking-tighter">{data.additionStreak || 0}</p>
-                  <span className="text-xs font-bold text-orange-600 bg-orange-100 border border-orange-200/50 px-2 py-0.5 rounded-full shadow-sm">Max {data.maxStreak || 0}</span>
+                  <span className="text-xs font-bold text-[#FF5A5F] bg-[#FF5A5F]/10 border border-[#FF5A5F]/20 px-2 py-0.5 rounded-full shadow-sm">Max {data.maxStreak || 0}</span>
                 </div>
               </div>
             </div>
