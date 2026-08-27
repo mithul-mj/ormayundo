@@ -22,12 +22,13 @@ body {
   border-collapse: collapse;
   margin: 1rem 0;
   font-size: 0.875rem;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border-radius: 12px;
   overflow: hidden;
 }
 
-.markdown-table th, .markdown-table td {
+.markdown-table th,
+.markdown-table td {
   border: 1px solid #f3f4f6;
   padding: 16px 20px;
   text-align: left;
@@ -48,8 +49,15 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {

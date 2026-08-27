@@ -137,7 +137,9 @@ export const deleteRecallItem = async (req, res) => {
     throw new Error('Recall item not found');
   }
 
-  await RecallItem.deleteOne({ _id: recallId });
+  // Soft delete instead of physical delete to preserve analytics data
+  item.status = 'archived';
+  await item.save();
 
   res.status(STATUS_CODES.OK).json({ message: 'Recall item deleted successfully' });
 };
@@ -146,7 +148,11 @@ export const deleteRecallItem = async (req, res) => {
 // @route   DELETE /api/recall/all
 // @access  Private
 export const deleteAllRecallItems = async (req, res) => {
-  await RecallItem.deleteMany({ userId: req.user._id });
+  // Soft delete all active items
+  await RecallItem.updateMany(
+    { userId: req.user._id, status: 'active' }, 
+    { $set: { status: 'archived' } }
+  );
   res.status(STATUS_CODES.OK).json({ message: 'All recall items wiped successfully' });
 };
 
@@ -154,7 +160,7 @@ export const deleteAllRecallItems = async (req, res) => {
 // @route   GET /api/recall
 // @access  Private
 export const getAllItems = async (req, res) => {
-  const items = await RecallItem.find({ userId: req.user._id }).sort({ createdAt: -1 });
+  const items = await RecallItem.find({ userId: req.user._id, status: 'active' }).sort({ createdAt: -1 });
   res.status(STATUS_CODES.OK).json(items);
 };
 

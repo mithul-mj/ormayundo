@@ -59,28 +59,42 @@ onBackgroundMessage(messaging, (payload) => {
   });
 });
 
+// Helper to create menus
+function createMenus() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "save-to-ormayundo",
+      title: "Save to Ormayundo",
+      contexts: ["selection"]
+    });
+  });
+}
+
+// On startup, check if logged in
+chrome.runtime.onStartup.addListener(() => {
+  chrome.storage.local.get(['ormayundo_user'], (result) => {
+    if (result.ormayundo_user) {
+      createMenus();
+    }
+  });
+});
+
 // Create the right-click menu when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "save-table",
-    title: "Save Table to Ormayundo",
-    contexts: ["all"]
-  });
-
-  chrome.contextMenus.create({
-    id: "save-to-ormayundo",
-    title: "Save Highlight to Ormayundo",
-    contexts: ["selection"]
+  chrome.storage.local.get(['ormayundo_user'], (result) => {
+    if (result.ormayundo_user) {
+      createMenus();
+    }
   });
 });
 
 // Listen for clicks on the right-click menu
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "save-table" || info.menuItemId === "save-to-ormayundo") {
+  if (info.menuItemId === "save-to-ormayundo") {
 
     // Ask the content script on the active tab for the Markdown text
     chrome.tabs.sendMessage(tab.id, {
-      action: info.menuItemId === "save-table" ? 'EXTRACT_CLICKED_TABLE' : 'EXTRACT_SELECTION'
+      action: 'EXTRACT_SELECTION'
     }, async (response) => {
 
       if (chrome.runtime.lastError || !response || response.error) {
@@ -116,6 +130,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
       }
     });
+  }
+});
+
+// Listen for Login/Logout events from App.jsx to manage menus dynamically
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'USER_LOGIN') {
+    createMenus();
+  } else if (request.action === 'USER_LOGOUT') {
+    chrome.contextMenus.removeAll();
   }
 });
 

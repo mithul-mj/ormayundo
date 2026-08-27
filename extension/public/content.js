@@ -1,4 +1,24 @@
 let floatingBtn = null;
+let isPopupEnabled = true; // Default to true
+
+// Initialize popup setting from storage
+chrome.storage.local.get(['ormayundo_popup_enabled'], (result) => {
+  if (result.ormayundo_popup_enabled !== undefined) {
+    isPopupEnabled = result.ormayundo_popup_enabled;
+  }
+});
+
+// Listen for toggles from the extension UI
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.ormayundo_popup_enabled) {
+    isPopupEnabled = changes.ormayundo_popup_enabled.newValue;
+    // If user disabled it while button is open, instantly remove it
+    if (!isPopupEnabled && floatingBtn) {
+      if (floatingBtn.parentNode) document.body.removeChild(floatingBtn);
+      floatingBtn = null;
+    }
+  }
+});
 
 function getExtractedText(selection) {
   if (!selection || selection.rangeCount === 0) return "";
@@ -22,8 +42,7 @@ function getExtractedText(selection) {
     }
   });
 
-  // If no tables were touched, return normal text
-  if (intersectedTables.size === 0) return rawText;
+  // (We no longer return rawText early, so we can perfectly preserve code structure below)
 
   // 2. We found tables! Generate beautiful Markdown for the FULL tables (not just the highlighted half)
   let markdownTables = "";
@@ -43,21 +62,28 @@ function getExtractedText(selection) {
     markdownTables += "\n";
   });
 
-  // 3. Did the user highlight paragraphs OUTSIDE the table?
+  // 3. Did the user highlight paragraphs OUTSIDE the table (or normal code)?
   // We clone the highlight, forcefully delete all table fragments from the clone, and see what's left.
   const container = document.createElement("div");
+  // CRITICAL FIX: Must be attached to the live DOM to accurately calculate line-breaks & spaces using innerText!
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.whiteSpace = 'pre-wrap';
+  document.body.appendChild(container);
+
   container.appendChild(selection.getRangeAt(0).cloneContents());
   container.querySelectorAll("table").forEach(t => t.remove());
 
   const remainingText = (container.innerText || container.textContent).trim();
+  document.body.removeChild(container);
 
   // If they highlighted outside text, include it alongside the full tables!
   if (remainingText.length > 0) {
-    return remainingText + "\n\n" + markdownTables.trim();
+    return markdownTables ? remainingText + "\n\n" + markdownTables.trim() : remainingText;
   }
 
   // If they ONLY highlighted half a table, discard the messy half and return the FULL perfect Markdown table!
-  return markdownTables.trim();
+  return markdownTables ? markdownTables.trim() : remainingText;
 }
 
 document.addEventListener('mouseup', (e) => {
@@ -73,8 +99,8 @@ document.addEventListener('mouseup', (e) => {
     floatingBtn = null;
   }
 
-  // If text is actually selected
-  if (selectedText.length > 0) {
+  // If text is actually selected, long enough to be a flashcard, and popup is enabled by user
+  if (isPopupEnabled && selectedText.length >= 20) {
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
@@ -88,9 +114,15 @@ document.addEventListener('mouseup', (e) => {
       Save to Ormayundo
     `;
 
-    // Position it slightly above the middle of the selected text
-    floatingBtn.style.top = `${rect.top + window.scrollY - 45}px`;
-    floatingBtn.style.left = `${rect.left + window.scrollX + (rect.width / 2)}px`;
+    // Always place the button just below the selection
+    // Clamp to window bounds so it doesn't fall off the bottom of the screen
+    const finalTop = Math.min(rect.bottom + 15, window.innerHeight - 60);
+    floatingBtn.style.top = `${finalTop}px`;
+
+    // Horizontally center it exactly where the mouse is (prevents it flying way left/right on huge blocks)
+    // Clamp to screen edges
+    const finalLeft = Math.max(80, Math.min(e.clientX, window.innerWidth - 80));
+    floatingBtn.style.left = `${finalLeft}px`;
 
     // Prevent the selection from disappearing when clicking the button
     floatingBtn.addEventListener('mousedown', (e) => {
@@ -126,7 +158,7 @@ document.addEventListener('mouseup', (e) => {
 
     document.body.appendChild(floatingBtn);
   }
-});
+}, true);
 
 // --- RIGHT CLICK TABLE EXTRACTION ---
 let lastRightClickedElement = null;

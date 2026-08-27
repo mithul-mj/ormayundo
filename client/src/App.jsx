@@ -3,10 +3,13 @@ import { LayoutDashboard, Library, Loader2 } from 'lucide-react'
 import AnalyticsDashboard from './AnalyticsDashboard'
 import FlashcardManager from './FlashcardManager'
 import Auth from './Auth'
+import Privacy from './Privacy'
 import { API_URL } from './config'
 import axios from 'axios'
 
 function App() {
+  const isPrivacyPage = window.location.pathname === '/privacy';
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -23,8 +26,16 @@ function App() {
         setLoading(false);
       }
     };
-    checkAuth();
-  }, []);
+    if (!isPrivacyPage) {
+      checkAuth();
+    } else {
+      setLoading(false);
+    }
+  }, [isPrivacyPage]);
+
+  if (isPrivacyPage) {
+    return <Privacy />;
+  }
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="animate-spin text-[#FF5A5F]" /></div>;

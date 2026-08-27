@@ -23,6 +23,7 @@ const messaging = getMessaging(app);
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [popupEnabled, setPopupEnabled] = useState(true);
 
   // VAPID KEY
   const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
@@ -30,11 +31,14 @@ function App() {
   // 1. Check if we are already logged in when the popup opens!
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['ormayundo_user'], (result) => {
+      chrome.storage.local.get(['ormayundo_user', 'ormayundo_popup_enabled'], (result) => {
         if (result.ormayundo_user) {
           setUser(result.ormayundo_user);
           // Try to get and sync FCM token whenever popup opens while logged in
           syncFcmToken();
+        }
+        if (result.ormayundo_popup_enabled !== undefined) {
+          setPopupEnabled(result.ormayundo_popup_enabled);
         }
         setIsLoading(false);
       });
@@ -85,6 +89,7 @@ function App() {
 
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.set({ ormayundo_user: userData });
+      chrome.runtime.sendMessage({ action: 'USER_LOGIN' });
     } else {
       localStorage.setItem('ormayundo_user', JSON.stringify(userData));
     }
@@ -94,10 +99,19 @@ function App() {
     setUser(null);
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.remove(['ormayundo_user']);
+      chrome.runtime.sendMessage({ action: 'USER_LOGOUT' });
     } else {
       localStorage.removeItem('ormayundo_user');
     }
     // Note: To be 100% secure, we should also call the backend /logout here to clear the HTTP-only cookies.
+  };
+
+  const togglePopup = () => {
+    const newVal = !popupEnabled;
+    setPopupEnabled(newVal);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ ormayundo_popup_enabled: newVal });
+    }
   };
 
   if (isLoading) {
@@ -118,9 +132,20 @@ function App() {
           Ormayundo.
         </a>
         {user && (
-          <span onClick={handleLogout} className="text-xs font-semibold text-gray-400 hover:text-brand cursor-pointer">
-            Logout
-          </span>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-500">
+              <input
+                type="checkbox"
+                checked={popupEnabled}
+                onChange={togglePopup}
+                className="w-3 h-3 accent-brand"
+              />
+              Auto-Popup
+            </label>
+            <span onClick={handleLogout} className="text-xs font-semibold text-gray-400 hover:text-brand cursor-pointer">
+              Logout
+            </span>
+          </div>
         )}
       </header>
 

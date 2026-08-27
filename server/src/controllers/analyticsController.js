@@ -39,15 +39,17 @@ export const getAnalytics = async (req, res) => {
     const nextWeek = new Date(now); nextWeek.setDate(nextWeek.getDate() + 7);
 
     cards.forEach(card => {
-      // 1. Mastery Breakdown
-      if (card.reviewCount <= 1) newCards++;
-      else {
-        const interval = card.lastReviewedAt ? (card.nextReviewAt - card.lastReviewedAt) / (1000 * 60 * 60 * 24) : 0;
-        if (interval > 21) masteredCards++;
-        else learningCards++;
+      // 1. Mastery Breakdown (Active cards only)
+      if (card.status !== 'archived') {
+        if (card.reviewCount <= 1) newCards++;
+        else {
+          const interval = card.lastReviewedAt ? (card.nextReviewAt - card.lastReviewedAt) / (1000 * 60 * 60 * 24) : 0;
+          if (interval > 21) masteredCards++;
+          else learningCards++;
+        }
       }
 
-      // 2. Top Sources
+      // 2. Top Sources (Include all historical cards)
       if (card.sourceUrl) {
         try {
           const url = new URL(card.sourceUrl);
@@ -56,7 +58,7 @@ export const getAnalytics = async (req, res) => {
         } catch (e) { }
       }
 
-      // 3 & 4. Heatmap & Retention
+      // 3 & 4. Heatmap & Retention (Include all historical reviews)
       card.reviewHistory.forEach(history => {
         if (history.reviewedAt >= thirtyDaysAgo) {
           const dateKey = history.reviewedAt.toISOString().split('T')[0];
@@ -69,12 +71,14 @@ export const getAnalytics = async (req, res) => {
         }
       });
 
-      // 5. Workload
-      if (card.nextReviewAt <= now) upcoming['Today']++;
-      else if (card.nextReviewAt <= tomorrow) upcoming['Tomorrow']++;
-      else if (card.nextReviewAt <= threeDays) upcoming['In 3 Days']++;
-      else if (card.nextReviewAt <= nextWeek) upcoming['Next Week']++;
-      else upcoming['Later']++;
+      // 5. Workload (Active cards only)
+      if (card.status !== 'archived') {
+        if (card.nextReviewAt <= now) upcoming['Today']++;
+        else if (card.nextReviewAt <= tomorrow) upcoming['Tomorrow']++;
+        else if (card.nextReviewAt <= threeDays) upcoming['In 3 Days']++;
+        else if (card.nextReviewAt <= nextWeek) upcoming['Next Week']++;
+        else upcoming['Later']++;
+      }
     });
 
     const topSources = Object.keys(sources).map(domain => ({ domain, count: sources[domain] }))
@@ -162,7 +166,7 @@ export const getAnalytics = async (req, res) => {
       heatmap: heatmapData,
       retentionRate,
       workload: workloadData,
-      totalCards: cards.length,
+      totalCards: cards.filter(c => c.status !== 'archived').length,
       additionStreak: displayStreak,
       maxStreak: req.user.maxStreak || 0,
       accuracyByTime
