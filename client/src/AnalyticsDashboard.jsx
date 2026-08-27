@@ -69,12 +69,12 @@ const AnalyticsDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
       {showConfetti && (
         <div className="fixed inset-0 z-50 pointer-events-none">
-          <Confetti 
-            width={windowDimension.width} 
-            height={windowDimension.height} 
-            recycle={false} 
-            numberOfPieces={600} 
-            gravity={0.12} 
+          <Confetti
+            width={windowDimension.width}
+            height={windowDimension.height}
+            recycle={false}
+            numberOfPieces={600}
+            gravity={0.12}
             colors={['#FF5A5F', '#FF385C', '#ff8a8f', '#ffffff']}
           />
         </div>
@@ -258,13 +258,13 @@ const AnalyticsDashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} domain={[0, 100]} tickFormatter={(val) => `${val}%`} />
-                  <Tooltip 
-                    cursor={{ fill: '#F3F4F6' }} 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                  <Tooltip
+                    cursor={{ fill: '#F3F4F6' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(value, name, props) => [
-                      `${value}% (${props.payload.correct} / ${props.payload.total} correct)`, 
+                      `${value}% (${props.payload.correct} / ${props.payload.total} correct)`,
                       'Accuracy'
-                    ]} 
+                    ]}
                   />
                   <Bar dataKey="accuracy" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                 </BarChart>
