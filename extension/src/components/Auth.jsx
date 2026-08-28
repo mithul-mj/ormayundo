@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../api';
+import { GOOGLE_WEB_CLIENT_ID } from '../config';
 
 export default function Auth({ onLoginSuccess }) {
   const [error, setError] = useState('');
@@ -13,7 +14,8 @@ export default function Auth({ onLoginSuccess }) {
     // Fallback method for Edge, Brave, or Chrome without profile sync
     const fallbackToWebAuthFlow = () => {
       const manifest = chrome.runtime.getManifest();
-      const clientId = manifest.oauth2.client_id;
+      // Use the Web Application Client ID for the cross-browser fallback, NOT the Chrome Extension Client ID
+      const clientId = GOOGLE_WEB_CLIENT_ID;
       const scopes = encodeURIComponent(manifest.oauth2.scopes.join(' '));
       const redirectUri = chrome.identity.getRedirectURL();
 
@@ -51,8 +53,9 @@ export default function Auth({ onLoginSuccess }) {
       );
     };
 
-    // First try the native Chrome shortcut (getAuthToken)
-    chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+    // First try the native Chrome shortcut silently (interactive: false)
+    // If we use interactive: true, Brave tries to open a broken native window first.
+    chrome.identity.getAuthToken({ interactive: false }, async (token) => {
       if (chrome.runtime.lastError || !token) {
         console.warn('Native getAuthToken failed, falling back to launchWebAuthFlow...', chrome.runtime.lastError);
         // If it fails (e.g., on Microsoft Edge), instantly trigger the fallback popup
