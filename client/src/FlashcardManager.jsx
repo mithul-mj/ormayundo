@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, Save, Search, RefreshCw, ChevronLeft, ChevronRight, Bomb } from 'lucide-react';
+import { Pencil, Trash2, X, Save, Search, RefreshCw, ChevronLeft, ChevronRight, Bomb, FolderPlus, Tag } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
@@ -8,19 +8,32 @@ import { API_URL } from './config';
 
 const FlashcardManager = () => {
   const [cards, setCards] = useState([]);
+  const [decks, setDecks] = useState([]);
+  const [selectedDeck, setSelectedDeck] = useState('All');
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ question: '', selectedText: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [newDeckName, setNewDeckName] = useState('');
+  const [showDeckInput, setShowDeckInput] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 5;
 
-  // Reset to first page when searching
+  // Reset to first page when searching or changing deck
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, selectedDeck]);
+
+  const fetchDecks = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/decks`, { withCredentials: true });
+      setDecks(res.data);
+    } catch (error) {
+      console.error('Failed to fetch decks', error);
+    }
+  };
 
   const fetchCards = async () => {
     try {
@@ -35,8 +48,36 @@ const FlashcardManager = () => {
   };
 
   useEffect(() => {
+    fetchDecks();
     fetchCards();
   }, []);
+
+  const handleCreateDeck = async (e) => {
+    e.preventDefault();
+    if (!newDeckName.trim()) return;
+
+    try {
+      const res = await axios.post(`${API_URL}/decks`, { name: newDeckName.trim() }, { withCredentials: true });
+      setDecks([...decks, res.data]);
+      setSelectedDeck(res.data.name);
+      setNewDeckName('');
+      setShowDeckInput(false);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Deck "${res.data.name}" created!`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to create deck',
+        text: error.response?.data?.message || 'Error creating deck'
+      });
+    }
+  };
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -118,9 +159,52 @@ const FlashcardManager = () => {
     }
   };
 
+  const handleDeleteDeck = async (deckToDelete) => {
+    if (!deckToDelete || deckToDelete.name.toLowerCase() === 'general') return;
+
+    const result = await Swal.fire({
+      title: `Delete Deck "${deckToDelete.name}"?`,
+      text: "Cards in this deck will be moved to 'General'.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF5A5F',
+      cancelButtonColor: '#9CA3AF',
+      confirmButtonText: 'Yes, delete deck',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl font-bold px-6 py-2',
+        cancelButton: 'rounded-xl font-bold px-6 py-2'
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axios.delete(`${API_URL}/decks/${deckToDelete._id}`, { withCredentials: true });
+      setDecks(decks.filter(d => d._id !== deckToDelete._id));
+      if (selectedDeck === deckToDelete.name) setSelectedDeck('All');
+      // Reassign local cards to General
+      setCards(cards.map(c => (c.deck === deckToDelete.name ? { ...c, deck: 'General' } : c)));
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Deck "${deckToDelete.name}" deleted`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    } catch (error) {
+      console.error('Failed to delete deck', error);
+    }
+  };
+
   const startEditing = (card) => {
     setEditingId(card._id);
-    setEditForm({ question: card.question, selectedText: card.selectedText });
+    setEditForm({
+      question: card.question || '',
+      selectedText: card.selectedText || '',
+      deck: card.deck || 'General'
+    });
   };
 
   const saveEdit = async (id) => {
@@ -134,10 +218,10 @@ const FlashcardManager = () => {
   };
 
   const filteredCards = cards.filter(c => {
-    const question = c.question || '';
-    const text = c.selectedText || '';
-    return question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      text.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (c.question || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.selectedText || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDeck = selectedDeck === 'All' || (c.deck || 'General') === selectedDeck;
+    return matchesSearch && matchesDeck;
   });
 
   // Pagination Logic
@@ -146,12 +230,17 @@ const FlashcardManager = () => {
   const currentCards = filteredCards.slice(indexOfFirstCard, indexOfLastCard);
   const totalPages = Math.ceil(filteredCards.length / cardsPerPage);
 
+  const getDeckColor = (deckName) => {
+    const found = decks.find(d => d.name.toLowerCase() === (deckName || 'general').toLowerCase());
+    return found?.color || '#FF9532';
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Manage Flashcards</h1>
-          <p className="text-gray-500 mt-1">View, edit, or delete your entire knowledge base.</p>
+          <p className="text-gray-500 mt-1">View, filter by deck, edit, or delete your knowledge base.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-72">
@@ -173,24 +262,117 @@ const FlashcardManager = () => {
         </div>
       </div>
 
+      {/* --- DECKS FILTER BAR --- */}
+      <div className="flex flex-wrap items-center gap-2 pt-2 pb-1 border-b border-gray-100">
+        <button
+          onClick={() => setSelectedDeck('All')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+            selectedDeck === 'All'
+              ? 'bg-gray-900 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          All Decks ({cards.length})
+        </button>
+
+        {decks.map(deck => {
+          const count = cards.filter(c => (c.deck || 'General') === deck.name).length;
+          const isGeneral = deck.name.toLowerCase() === 'general';
+          return (
+            <div key={deck._id || deck.name} className="group relative flex items-center">
+              <button
+                onClick={() => setSelectedDeck(deck.name)}
+                style={{
+                  backgroundColor: selectedDeck === deck.name ? deck.color : `${deck.color}18`,
+                  color: selectedDeck === deck.name ? '#FFFFFF' : deck.color
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: selectedDeck === deck.name ? '#FFFFFF' : deck.color }}></span>
+                {deck.name} ({count})
+              </button>
+              {!isGeneral && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteDeck(deck); }}
+                  title={`Delete deck "${deck.name}"`}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 text-gray-400 hover:text-red-500 rounded-full"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {showDeckInput ? (
+          <form onSubmit={handleCreateDeck} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Deck name..."
+              value={newDeckName}
+              onChange={e => setNewDeckName(e.target.value)}
+              autoFocus
+              className="px-3 py-1.5 border border-gray-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+            />
+            <button type="submit" className="px-3 py-1.5 bg-[#FF5A5F] text-white rounded-xl text-xs font-bold hover:bg-[#FF385C]">
+              Add
+            </button>
+            <button type="button" onClick={() => setShowDeckInput(false)} className="p-1 text-gray-400 hover:text-gray-700">
+              <X className="w-4 h-4" />
+            </button>
+          </form>
+        ) : (
+          <button
+            onClick={() => setShowDeckInput(true)}
+            className="px-3 py-2 border border-dashed border-gray-300 hover:border-gray-400 text-gray-500 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+          >
+            <FolderPlus className="w-3.5 h-3.5" /> + New Deck
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="flex justify-center p-20"><RefreshCw className="w-8 h-8 animate-spin text-gray-400" /></div>
       ) : (
         <div className="grid gap-6">
           {filteredCards.length === 0 && (
             <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-              <p className="text-gray-500">No flashcards found.</p>
+              <p className="text-gray-500 font-medium">No flashcards found in this deck.</p>
             </div>
           )}
           {currentCards.map((card) => (
             <div key={card._id} className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col md:flex-row gap-6">
               <div className="flex-1 space-y-5">
 
-                {/* Question Section */}
+                {/* Question Section & Deck Badge */}
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-brand mb-1.5 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand"></div> Question
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-brand flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-brand"></div> Question
+                    </h3>
+
+                    {editingId === card._id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-400">Deck:</span>
+                        <select
+                          value={editForm.deck || 'General'}
+                          onChange={e => setEditForm({ ...editForm, deck: e.target.value })}
+                          className="px-3 py-1 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+                        >
+                          {decks.map(d => (
+                            <option key={d._id || d.name} value={d.name}>{d.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <span
+                        style={{ backgroundColor: `${getDeckColor(card.deck)}18`, color: getDeckColor(card.deck) }}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide flex items-center gap-1"
+                      >
+                        <Tag className="w-3 h-3" /> {card.deck || 'General'}
+                      </span>
+                    )}
+                  </div>
                   {editingId === card._id ? (
                     <input
                       type="text"

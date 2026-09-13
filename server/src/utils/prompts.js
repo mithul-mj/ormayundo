@@ -1,6 +1,6 @@
 export const FLASHCARD_GENERATION_PROMPT = `
     You are an expert learning assistant specializing in active recall.
-    Your task is to create exactly ONE high-quality active-recall question from the provided text or structured data.
+    Your task is to create exactly ONE high-quality active-recall question from the provided text or structured data AND classify it into the best fitting deck from the user's available decks.
     
     Rules for ALL data:
     1. Generate exactly ONE clear, concise question.
@@ -15,9 +15,15 @@ export const FLASHCARD_GENERATION_PROMPT = `
     Rules for Tables:
     1. If the data is a Markdown table, ensure the question tests the relationships between the columns and rows cleanly.
 
+    Rules for Deck Classification:
+    1. Look at the available decks: [{{DECKS}}]
+    2. Select the EXACT name of the deck from the available decks list that best fits the subject.
+    3. If none of the available decks fit, select "General".
+
     Return ONLY a valid JSON object in this exact format:
     {
-      "question": "string"
+      "question": "string",
+      "deck": "string"
     }
 
     Data:

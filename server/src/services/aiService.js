@@ -5,11 +5,14 @@ const groq = new Groq({
   apiKey: process.env.AI_API_KEY
 });
 
-export const generateRecallQuestion = async (selectedText) => {
-  const prompt = FLASHCARD_GENERATION_PROMPT.replace('{{DATA}}', selectedText);
+export const generateRecallQuestion = async (selectedText, userDecks = ['General']) => {
+  const decksList = Array.isArray(userDecks) && userDecks.length > 0 ? userDecks.join(', ') : 'General';
+  const prompt = FLASHCARD_GENERATION_PROMPT
+    .replace('{{DATA}}', selectedText)
+    .replace('{{DECKS}}', decksList);
 
   try {
-    console.log('[AI] Sending request to Groq...');
+    console.log(`[AI] Sending request to Groq with decks: [${decksList}]...`);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -31,7 +34,11 @@ export const generateRecallQuestion = async (selectedText) => {
 
     const responseContent = chatCompletion.choices[0]?.message?.content;
     const parsed = JSON.parse(responseContent);
-    return parsed.question;
+
+    return {
+      question: parsed.question || 'What is the key takeaway from this text?',
+      deck: parsed.deck || 'General'
+    };
 
   } catch (error) {
     console.error("AI Generation Error:", error);

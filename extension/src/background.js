@@ -92,44 +92,67 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "save-to-ormayundo") {
 
-    // Ask the content script on the active tab for the Markdown text
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'EXTRACT_SELECTION'
-    }, async (response) => {
+// Ask the content script on the active tab for the Markdown text
+chrome.tabs.sendMessage(tab.id, {
+  action: 'EXTRACT_SELECTION'
+}, async (response) => {
 
-      if (chrome.runtime.lastError || !response || response.error) {
-        console.error('[background.js] Error from content script:', chrome.runtime.lastError || response?.error);
-        chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-        return;
-      }
+  if (chrome.runtime.lastError) {
+    console.error('[background.js] Content script runtime error:', chrome.runtime.lastError.message);
+    chrome.action.setBadgeText({ text: 'X' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+    return;
+  }
 
-      console.log('[background.js] Right-click menu clicked! Saving text:', response.text);
-      chrome.action.setBadgeText({ text: '...' });
-      chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+  if (!response || response.error) {
+    console.error('[background.js] Error from content script:', response?.error || response);
+    chrome.action.setBadgeText({ text: 'X' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+    return;
+  }
 
-      try {
-        const res = await fetchWithAuth(`${API_URL}/recall`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ selectedText: response.text, sourceUrl: tab.url })
-        });
+  const selectedText = response.text;
+  if (!selectedText || selectedText.trim().length < 20) {
+    console.warn('[background.js] Selection too short or empty, aborting save.');
+    return;
+  }
 
-        if (!res.ok) throw new Error('Server returned ' + res.status);
+  const sourceUrl = tab && tab.url ? tab.url : '';
+  if (!sourceUrl) {
+    console.error('[background.js] Tab URL missing, cannot save recall.');
+    chrome.action.setBadgeText({ text: 'X' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+    return;
+  }
 
-        console.log('[background.js] Successfully saved to backend!');
-        chrome.action.setBadgeText({ text: '✓' });
-        chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-      } catch (error) {
-        console.error('[background.js] Error saving from context menu:', error);
-        chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-      }
+  console.log('[background.js] Right-click menu clicked! Saving text:', selectedText);
+  chrome.action.setBadgeText({ text: '...' });
+  chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+
+  try {
+    const payload = { selectedText, sourceUrl };
+    console.log('[background.js] Payload being sent:', payload);
+    const res = await fetchWithAuth(`${API_URL}/recall`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
     });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    console.log('[background.js] Successfully saved to backend!');
+    chrome.action.setBadgeText({ text: '✓' });
+    chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+  } catch (error) {
+    console.error('[background.js] Error saving from context menu:', error);
+    chrome.action.setBadgeText({ text: 'X' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+  }
+});
   }
 });
 
@@ -179,3 +202,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep message channel open
   }
 });
+
+// --- HIGHLIGHT SAVED TEXT ON PAGE LOAD / TAB SWITCH ---
+// Shared helper: inject content script (if not already present) then send HIGHLIGHT_PAGE
+async function sendHighlights(tabId, url) {
+  if (!url || !url.startsWith('http')) return;
+
+  // Ignore our own web app dashboard URLs so the extension doesn't highlight card text inside the dashboard manager!
+  if (url.includes('ormayundo-woad.vercel.app') || url.includes('localhost:5173') || url.includes('localhost:3000')) return;
+
+  try {
+    const response = await fetchWithAuth(`${API_URL}/recall?url=${encodeURIComponent(url)}`, {
+      credentials: 'include'
+    });
+
+    if (!response.ok) return;
+
+    const items = await response.json();
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    const highlights = items
+      .filter(item => item.selectedText && typeof item.selectedText === 'string')
+      .map(item => ({ text: item.selectedText, createdAt: item.createdAt }));
+
+    if (highlights.length === 0) return;
+
+    // Inject the content script first (idempotent – safe to call even if already injected)
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        files: ['content.js']
+      });
+    } catch (_) {
+      // Already injected or restricted page – proceed anyway
+    }
+
+    // Small delay to let the injected script initialise
+    await new Promise(r => setTimeout(r, 200));
+
+    chrome.tabs.sendMessage(tabId, { action: 'HIGHLIGHT_PAGE', highlights }, () => {
+      if (chrome.runtime.lastError) { /* ignore – content script may still be loading */ }
+    });
+  } catch (e) {
+    // User not logged in or network issue — don't surface errors
+  }
+}
+
+// Trigger on page load completion
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'complete') return;
+  sendHighlights(tabId, tab.url);
+});
+
+// Trigger when the user switches to a tab (covers pages already loaded)
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    sendHighlights(activeInfo.tabId, tab.url);
+  } catch (_) {}
+});
+
+

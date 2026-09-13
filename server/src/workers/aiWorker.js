@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq';
 import redisConnection from '../config/redis.js';
 import { generateRecallQuestion } from '../services/aiService.js';
 import RecallItem from '../models/recallItem.js';
+import Deck from '../models/deck.js';
 import { QUEUE_NAMES } from '../utils/constants.js';
 
 // Export the Queue so the controller can add jobs to it
@@ -16,21 +17,33 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
   console.log(`[BullMQ] Processing job ${job.id} for user ${userId}`);
   console.log(`[BullMQ] Text: "${selectedText.substring(0, 40)}..."`);
 
-  // 1. Call AI
-  console.log(`[BullMQ] Starting AI Generation...`);
+  // 1. Fetch user's existing deck names
+  let userDeckNames = ['General'];
   try {
-    const question = await generateRecallQuestion(selectedText);
-    console.log(`[BullMQ] AI Generation successful: "${question}"`);
+    const userDecks = await Deck.find({ userId });
+    if (userDecks && userDecks.length > 0) {
+      userDeckNames = userDecks.map(d => d.name);
+    }
+  } catch (e) {
+    console.error('[BullMQ] Could not fetch user decks, using fallback:', e);
+  }
 
-    // 2. Save to DB
+  // 2. Call AI Generation & Classification
+  console.log(`[BullMQ] Starting AI Generation with decks [${userDeckNames.join(', ')}]...`);
+  try {
+    const { question, deck } = await generateRecallQuestion(selectedText, userDeckNames);
+    console.log(`[BullMQ] AI Generation successful! Question: "${question}", Assigned Deck: "${deck}"`);
+
+    // 3. Save to DB
     console.log(`[BullMQ] Saving to MongoDB...`);
     const newItem = await RecallItem.create({
       userId,
       selectedText,
       question,
-      sourceUrl
+      sourceUrl,
+      deck: deck || 'General'
     });
-    console.log(`[BullMQ] Successfully created MongoDB document with ID: ${newItem._id}`);
+    console.log(`[BullMQ] Successfully created MongoDB document with ID: ${newItem._id} in deck "${newItem.deck}"`);
 
     return { success: true, id: newItem._id };
   } catch (error) {

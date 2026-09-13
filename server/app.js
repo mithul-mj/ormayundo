@@ -6,6 +6,7 @@ import { connectDB } from './config/db.js';
 import authRoutes from './src/routes/authRoutes.js';
 import recallRoutes from './src/routes/recallRoutes.js';
 import analyticsRoutes from './src/routes/analyticsRoutes.js';
+import deckRoutes from './src/routes/deckRoutes.js';
 import { startCronJobs } from './src/services/pushService.js';
 import './src/workers/aiWorker.js'; // Start the BullMQ AI Worker
 import { errorHandler } from './src/middleware/errorMiddleware.js';
@@ -32,6 +33,7 @@ app.get('/api/ping', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/recall', recallRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/decks', deckRoutes);
 
 // Global Error Handler MUST be the last middleware
 app.use(errorHandler);

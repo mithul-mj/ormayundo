@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import './index.css';
@@ -132,19 +132,40 @@ function App() {
           Ormayundo.
         </a>
         {user && (
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-500">
-              <input
-                type="checkbox"
-                checked={popupEnabled}
-                onChange={togglePopup}
-                className="w-3 h-3 accent-brand"
-              />
-              Auto-Popup
-            </label>
-            <span onClick={handleLogout} className="text-xs font-semibold text-gray-400 hover:text-brand cursor-pointer">
+          <div className="flex items-center gap-3.5">
+            {/* Airbnb-style Smooth Toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={popupEnabled}
+              onClick={togglePopup}
+              className="flex items-center gap-2 text-xs font-medium text-[#717171] hover:text-[#222222] transition-colors cursor-pointer select-none"
+            >
+              <span>Auto-Popup</span>
+              <div
+                className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                  popupEnabled ? 'bg-[#FF385C]' : 'bg-gray-200'
+                }`}
+              >
+                <div
+                  className={`bg-white w-3.5 h-3.5 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                    popupEnabled ? 'translate-x-3.5' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Airbnb-style subtle dot divider */}
+            <span className="text-gray-300 text-xs font-bold leading-none select-none">·</span>
+
+            {/* Airbnb-style Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="text-xs font-medium text-[#717171] hover:text-[#222222] transition-colors cursor-pointer"
+              title="Logout"
+            >
               Logout
-            </span>
+            </button>
           </div>
         )}
       </header>

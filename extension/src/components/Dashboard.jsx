@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Brain, CheckCircle, Clock, Trash2, Bomb, Maximize2, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Brain,
+  CheckCircle,
+  Trash2,
+  Maximize2,
+  X,
+  Pencil,
+  Loader2,
+  Check,
+  AlertCircle
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import api from '../api';
 
-const Dashboard = ({ user }) => {
+const Dashboard = () => {
   const [dueCards, setDueCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -12,19 +22,37 @@ const Dashboard = ({ user }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ show: false, type: null }); // 'single' | 'all'
 
+  // Question Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editQuestion, setEditQuestion] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+
   useEffect(() => {
-    fetchDueCards();
+    let ignore = false;
+    const fetchCards = async () => {
+      try {
+        const { data } = await api.get('/recall/due');
+        if (!ignore) setDueCards(data);
+      } catch (error) {
+        console.error('Failed to fetch due cards:', error);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    fetchCards();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const fetchDueCards = async () => {
-    try {
-      const { data } = await api.get('/recall/due');
-      setDueCards(data);
-    } catch (error) {
-      console.error('Failed to fetch due cards:', error);
-    } finally {
-      setLoading(false);
-    }
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage((current) => (current === message ? null : current));
+    }, 2500);
   };
 
   const handleReview = async (rating) => {
@@ -52,12 +80,96 @@ const Dashboard = ({ user }) => {
       setDueCards((prev) => prev.filter((_, idx) => idx !== currentCardIndex));
       setIsFlipped(false);
       setDeleteModal({ show: false, type: null });
+      showToast('Flashcard deleted');
     } catch (error) {
       console.error('Failed to delete card:', error);
     }
   };
 
+  const confirmDeleteAll = async () => {
+    try {
+      await api.delete('/recall/all');
+      setDueCards([]);
+      setIsFlipped(false);
+      setDeleteModal({ show: false, type: null });
+      showToast('All flashcards wiped');
+    } catch (error) {
+      console.error('Failed to delete all cards:', error);
+    }
+  };
 
+  // Open Edit Question Modal
+  const handleOpenEdit = (e) => {
+    if (e) e.stopPropagation();
+    const card = dueCards[currentCardIndex];
+    if (!card) return;
+    setEditQuestion(card.question || '');
+    setEditError(null);
+    setIsEditing(true);
+  };
+
+  const handleCloseEdit = () => {
+    setIsEditing(false);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = useCallback(async (e) => {
+    if (e) e.preventDefault();
+    if (!editQuestion.trim()) {
+      setEditError('Question cannot be empty.');
+      return;
+    }
+
+    const card = dueCards[currentCardIndex];
+    if (!card) return;
+
+    setIsSaving(true);
+    setEditError(null);
+
+    try {
+      const payload = {
+        question: editQuestion.trim()
+      };
+
+      const { data } = await api.put(`/recall/${card._id}`, payload);
+
+      // Update in-memory state
+      setDueCards((prev) =>
+        prev.map((c, idx) =>
+          idx === currentCardIndex
+            ? {
+                ...c,
+                question: data.question || editQuestion.trim()
+              }
+            : c
+        )
+      );
+
+      setIsEditing(false);
+      showToast('Question updated successfully!');
+    } catch (err) {
+      console.error('Failed to update question:', err);
+      setEditError(err.response?.data?.message || 'Failed to update question. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editQuestion, dueCards, currentCardIndex]);
+
+  // Keyboard shortcut listener for modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isEditing) return;
+      if (e.key === 'Escape') {
+        handleCloseEdit();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSaveEdit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, handleSaveEdit]);
 
   if (loading) {
     return <div className="p-8 text-center text-gray-500">Checking your memory bank...</div>;
@@ -78,6 +190,112 @@ const Dashboard = ({ user }) => {
 
   return (
     <div className="relative p-6 flex flex-col items-center h-full w-full overflow-hidden">
+      {/* Toast Notification (Airbnb Black Pill) */}
+      {toastMessage && (
+        <div className="absolute top-4 z-50 bg-[#222222] text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl flex items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+          <Check className="w-3.5 h-3.5 text-[#008A05]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Edit Question Modal (Airbnb Style) */}
+      {isEditing && (
+        <div
+          className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-5 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseEdit();
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm flex flex-col gap-3.5 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <button
+                onClick={handleCloseEdit}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-[#222222] transition-colors cursor-pointer -ml-1"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <h3 className="text-sm font-bold text-[#222222] tracking-tight">Edit Question</h3>
+              <div className="w-8" />
+            </div>
+
+            {/* Error Alert */}
+            {editError && (
+              <div className="flex items-center gap-2 text-xs bg-red-50 text-red-600 border border-red-200 p-3 rounded-2xl">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            {/* Question Input */}
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center text-xs font-semibold text-[#222222]">
+                <span>Question Prompt</span>
+                <span className="text-[11px] text-[#717171] font-normal">{editQuestion.length} characters</span>
+              </div>
+              <textarea
+                autoFocus
+                value={editQuestion}
+                onChange={(e) => setEditQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSaveEdit(e);
+                  }
+                }}
+                placeholder="What question will help you recall this?"
+                rows={3}
+                className="w-full p-3.5 border border-gray-200 rounded-2xl text-sm font-medium text-[#222222] placeholder:text-gray-400 focus:outline-none focus:border-[#222222] focus:ring-1 focus:ring-[#222222] resize-none transition-all"
+              />
+            </div>
+
+            {/* Read-Only Answer Reference */}
+            {currentCard?.selectedText && (
+              <div className="bg-[#F7F7F7] border border-gray-100 rounded-2xl p-3.5 flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#717171]">Source Material</span>
+                <div className="max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                  <p className="text-xs text-[#717171] italic leading-relaxed whitespace-pre-wrap">
+                    {currentCard.selectedText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-[11px] text-[#717171] text-center my-0.5">
+              Press <span className="font-semibold text-[#222222]">Enter</span> to save · <span className="font-semibold text-[#222222]">Shift + Enter</span> for new line
+            </p>
+
+            {/* Modal Footer Buttons */}
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-1">
+              <button
+                type="button"
+                onClick={handleCloseEdit}
+                disabled={isSaving}
+                className="text-xs font-bold text-[#222222] underline hover:text-black py-2 px-1 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSaving || !editQuestion.trim()}
+                className="bg-gradient-to-r from-[#FF385C] to-[#E61E4D] hover:opacity-95 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving</span>
+                  </>
+                ) : (
+                  <span>Save Changes</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Delete Confirmation Modal */}
       {deleteModal.show && (
         <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center p-6">
@@ -96,7 +314,7 @@ const Dashboard = ({ user }) => {
             <div className="flex w-full gap-3">
               <button
                 onClick={(e) => { e.stopPropagation(); setDeleteModal({ show: false, type: null }); }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -106,7 +324,7 @@ const Dashboard = ({ user }) => {
                   if (deleteModal.type === 'all') confirmDeleteAll();
                   else confirmDeleteSingle();
                 }}
-                className="flex-1 px-4 py-2 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-colors shadow-sm shadow-red-200"
+                className="flex-1 px-4 py-2 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-colors shadow-sm shadow-red-200 cursor-pointer"
               >
                 Delete
               </button>
@@ -122,7 +340,7 @@ const Dashboard = ({ user }) => {
             <h3 className="text-white font-bold text-lg">Full Text</h3>
             <button
               onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5 text-white" />
             </button>
@@ -133,10 +351,10 @@ const Dashboard = ({ user }) => {
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  table: ({ node, ...props }) => <table className="w-full border-collapse my-2 text-xs" {...props} />,
-                  th: ({ node, ...props }) => <th className="border border-white/30 bg-black/20 px-2 py-1 text-left font-bold" {...props} />,
-                  td: ({ node, ...props }) => <td className="border border-white/30 px-2 py-1" {...props} />,
-                  p: ({ node, ...props }) => <p className="mb-3 last:mb-0" {...props} />,
+                  table: ({ ...props }) => <table className="w-full border-collapse my-2 text-xs" {...props} />,
+                  th: ({ ...props }) => <th className="border border-white/30 bg-black/20 px-2 py-1 text-left font-bold" {...props} />,
+                  td: ({ ...props }) => <td className="border border-white/30 px-2 py-1" {...props} />,
+                  p: ({ ...props }) => <p className="mb-3 last:mb-0" {...props} />,
                 }}
               >
                 {currentCard.selectedText}
@@ -169,7 +387,7 @@ const Dashboard = ({ user }) => {
           </span>
           <button
             onClick={handleDelete}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
             title="Delete Flashcard"
           >
             <Trash2 className="w-4 h-4" />
@@ -191,9 +409,19 @@ const Dashboard = ({ user }) => {
             transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
           }}
         >
-          <div className="flex flex-col items-center">
-            <span className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-4">Question</span>
-            <p className="text-lg font-medium text-gray-800 leading-snug">{currentCard.question}</p>
+          <div className="flex flex-col items-center max-w-full px-2">
+            <div className="flex items-center gap-1.5 mb-4 group/edit">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-brand">Question</span>
+              <button
+                onClick={handleOpenEdit}
+                className="text-gray-400 hover:text-brand transition-colors cursor-pointer ml-1 p-0.5"
+                title="Edit Question"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-lg font-medium text-gray-800 leading-snug break-words">{currentCard.question}</p>
             <span className="absolute bottom-4 text-xs text-gray-400">Click to flip</span>
           </div>
         </div>
@@ -212,7 +440,7 @@ const Dashboard = ({ user }) => {
 
             <button
               onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
-              className="absolute top-0 right-0 p-2 text-red-200 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+              className="absolute top-0 right-0 p-2 text-red-200 hover:text-white hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
               title="Expand text"
             >
               <Maximize2 className="w-4 h-4" />
@@ -222,10 +450,10 @@ const Dashboard = ({ user }) => {
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  table: ({ node, ...props }) => <table className="w-full border-collapse my-2 text-xs" {...props} />,
-                  th: ({ node, ...props }) => <th className="border border-red-300/30 bg-red-800/20 px-2 py-1 text-left font-bold" {...props} />,
-                  td: ({ node, ...props }) => <td className="border border-red-300/30 px-2 py-1" {...props} />,
-                  p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                  table: ({ ...props }) => <table className="w-full border-collapse my-2 text-xs" {...props} />,
+                  th: ({ ...props }) => <th className="border border-red-300/30 bg-red-800/20 px-2 py-1 text-left font-bold" {...props} />,
+                  td: ({ ...props }) => <td className="border border-red-300/30 px-2 py-1" {...props} />,
+                  p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
                 }}
               >
                 {currentCard.selectedText}
@@ -240,7 +468,7 @@ const Dashboard = ({ user }) => {
         <div className="w-full grid grid-cols-4 gap-2 mt-6 shrink-0 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <button
             onClick={() => handleReview('forgot')}
-            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-red-100 hover:text-red-600 transition-colors"
+            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Forgot</span>
             <span className="text-[10px] text-gray-500 mt-1">1 min</span>
@@ -248,7 +476,7 @@ const Dashboard = ({ user }) => {
 
           <button
             onClick={() => handleReview('hard')}
-            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 transition-colors"
+            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Hard</span>
             <span className="text-[10px] text-gray-500 mt-1">3 mins</span>
@@ -256,7 +484,7 @@ const Dashboard = ({ user }) => {
 
           <button
             onClick={() => handleReview('good')}
-            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-blue-100 hover:text-blue-600 transition-colors"
+            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-blue-100 hover:text-blue-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Good</span>
             <span className="text-[10px] text-gray-500 mt-1">5 mins</span>
@@ -264,7 +492,7 @@ const Dashboard = ({ user }) => {
 
           <button
             onClick={() => handleReview('easy')}
-            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-green-100 hover:text-green-600 transition-colors"
+            className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-green-100 hover:text-green-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Easy</span>
             <span className="text-[10px] text-gray-500 mt-1">10 mins</span>
@@ -278,3 +506,4 @@ const Dashboard = ({ user }) => {
 };
 
 export default Dashboard;
+

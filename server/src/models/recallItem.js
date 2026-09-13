@@ -52,7 +52,15 @@ const recallItemSchema = new mongoose.Schema({
     notificationSent: {
         type: Boolean,
         default: false
+    },
+    deck: {
+        type: String,
+        default: 'General'
     }
 }, { timestamps: true });
+
+// Compound index for instant sub-millisecond URL lookup per user
+recallItemSchema.index({ userId: 1, status: 1, sourceUrl: 1 });
+recallItemSchema.index({ userId: 1, deck: 1 });
 
 export default mongoose.model('RecallItem', recallItemSchema);

@@ -9,7 +9,7 @@ import { JOB_NAMES } from '../utils/constants.js';
 // @access  Private
 export const createRecallItem = async (req, res) => {
   console.log('--- NEW SAVE REQUEST ---');
-  
+
   if (!req.user) {
     console.error('[Backend] Save request failed: No User attached (Cookie missing?)');
     return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: 'Unauthorized' });
@@ -17,8 +17,9 @@ export const createRecallItem = async (req, res) => {
 
   const { selectedText, sourceUrl } = req.body;
   const userId = req.user._id;
+  const cleanSourceUrl = normalizeUrl(sourceUrl);
 
-  console.log(`[Backend] Received text to save: "${selectedText?.substring(0, 30)}..." for user ${userId}`);
+  console.log(`[Backend] Received text to save: "${selectedText?.substring(0, 30)}..." for user ${userId} (URL: ${cleanSourceUrl})`);
 
   // Optimize: Update Streak in Database
   const now = new Date();
@@ -26,7 +27,7 @@ export const createRecallItem = async (req, res) => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
-  
+
   const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
 
   if (lastAddedStr !== todayStr) {
@@ -35,11 +36,11 @@ export const createRecallItem = async (req, res) => {
     } else {
       req.user.currentStreak = 1;
     }
-    
+
     if (req.user.currentStreak > (req.user.maxStreak || 0)) {
       req.user.maxStreak = req.user.currentStreak;
     }
-    
+
     req.user.lastAddedDate = now;
     await req.user.save();
   }
@@ -49,12 +50,12 @@ export const createRecallItem = async (req, res) => {
     const job = await aiQueue.add(JOB_NAMES.GENERATE_FLASHCARD, {
       userId,
       selectedText,
-      sourceUrl
+      sourceUrl: cleanSourceUrl
     }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000 }
     });
-    
+
     console.log(`[Backend] Job successfully added to Queue with ID: ${job.id}`);
 
     // 2. Instantly respond to the user
@@ -154,25 +155,38 @@ export const deleteRecallItem = async (req, res) => {
 export const deleteAllRecallItems = async (req, res) => {
   // Soft delete all active items
   await RecallItem.updateMany(
-    { userId: req.user._id, status: 'active' }, 
+    { userId: req.user._id, status: 'active' },
     { $set: { status: 'archived' } }
   );
   res.status(STATUS_CODES.OK).json({ message: 'All recall items wiped successfully' });
 };
 
-// @desc    Get all recall items (for Manager view)
+const normalizeUrl = (url) => {
+  if (!url) return '';
+  return String(url).trim().split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+};
+
+// @desc    Get all recall items (for Manager view), optionally filtered by sourceUrl
 // @route   GET /api/recall
+// @route   GET /api/recall?url=https://...
 // @access  Private
 export const getAllItems = async (req, res) => {
-  const items = await RecallItem.find({ userId: req.user._id, status: 'active' }).sort({ createdAt: -1 });
+  const query = { userId: req.user._id, status: 'active' };
+  if (req.query.url) {
+    const cleanUrl = normalizeUrl(req.query.url);
+    if (cleanUrl) {
+      query.sourceUrl = cleanUrl;
+    }
+  }
+  const items = await RecallItem.find(query).sort({ createdAt: -1 });
   res.status(STATUS_CODES.OK).json(items);
 };
 
-// @desc    Edit a recall item (Question/Answer)
+// @desc    Edit a recall item (Question/Answer/Deck)
 // @route   PUT /api/recall/:id
 // @access  Private
 export const editRecallItem = async (req, res) => {
-  const { question, selectedText } = req.body;
+  const { question, selectedText, deck } = req.body;
   const recallId = req.params.id;
 
   const item = await RecallItem.findOne({ _id: recallId, userId: req.user._id });
@@ -184,6 +198,7 @@ export const editRecallItem = async (req, res) => {
 
   if (question) item.question = question;
   if (selectedText) item.selectedText = selectedText;
+  if (deck) item.deck = deck;
 
   await item.save();
 
