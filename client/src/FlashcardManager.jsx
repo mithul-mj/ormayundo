@@ -15,7 +15,9 @@ const FlashcardManager = () => {
   const [editForm, setEditForm] = useState({ question: '', selectedText: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [newDeckName, setNewDeckName] = useState('');
+  const [newDeckColor, setNewDeckColor] = useState('#6366f1');
   const [showDeckInput, setShowDeckInput] = useState(false);
+  const [openDeckDropdown, setOpenDeckDropdown] = useState(null); // card._id
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,13 +56,14 @@ const FlashcardManager = () => {
 
   const handleCreateDeck = async (e) => {
     e.preventDefault();
-    if (!newDeckName.trim()) return;
+    if (newDeckName.trim().length < 3) return;
 
     try {
-      const res = await axios.post(`${API_URL}/decks`, { name: newDeckName.trim() }, { withCredentials: true });
+      const res = await axios.post(`${API_URL}/decks`, { name: newDeckName.trim(), color: newDeckColor }, { withCredentials: true });
       setDecks([...decks, res.data]);
       setSelectedDeck(res.data.name);
       setNewDeckName('');
+      setNewDeckColor('#6366f1');
       setShowDeckInput(false);
       Swal.fire({
         toast: true,
@@ -78,7 +81,6 @@ const FlashcardManager = () => {
       });
     }
   };
-
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: 'Delete this flashcard?',
@@ -266,11 +268,10 @@ const FlashcardManager = () => {
       <div className="flex flex-wrap items-center gap-2 pt-2 pb-1 border-b border-gray-100">
         <button
           onClick={() => setSelectedDeck('All')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
-            selectedDeck === 'All'
-              ? 'bg-gray-900 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${selectedDeck === 'All'
+            ? 'bg-gray-900 text-white shadow-sm'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
         >
           All Decks ({cards.length})
         </button>
@@ -286,7 +287,7 @@ const FlashcardManager = () => {
                   backgroundColor: selectedDeck === deck.name ? deck.color : `${deck.color}18`,
                   color: selectedDeck === deck.name ? '#FFFFFF' : deck.color
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 shadow-sm"
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 shadow-sm ${!isGeneral ? 'pr-8' : ''}`}
               >
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: selectedDeck === deck.name ? '#FFFFFF' : deck.color }}></span>
                 {deck.name} ({count})
@@ -295,7 +296,8 @@ const FlashcardManager = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeleteDeck(deck); }}
                   title={`Delete deck "${deck.name}"`}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 text-gray-400 hover:text-red-500 rounded-full"
+                  className="absolute right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10"
+                  style={{ color: selectedDeck === deck.name ? '#FFFFFF' : deck.color }}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -304,30 +306,94 @@ const FlashcardManager = () => {
           );
         })}
 
-        {showDeckInput ? (
-          <form onSubmit={handleCreateDeck} className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Deck name..."
-              value={newDeckName}
-              onChange={e => setNewDeckName(e.target.value)}
-              autoFocus
-              className="px-3 py-1.5 border border-gray-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
-            />
-            <button type="submit" className="px-3 py-1.5 bg-[#FF5A5F] text-white rounded-xl text-xs font-bold hover:bg-[#FF385C]">
-              Add
-            </button>
-            <button type="button" onClick={() => setShowDeckInput(false)} className="p-1 text-gray-400 hover:text-gray-700">
-              <X className="w-4 h-4" />
-            </button>
-          </form>
-        ) : (
-          <button
-            onClick={() => setShowDeckInput(true)}
-            className="px-3 py-2 border border-dashed border-gray-300 hover:border-gray-400 text-gray-500 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+        <button
+          onClick={() => setShowDeckInput(true)}
+          className="px-3 py-1.5 border border-dashed border-gray-300 hover:border-[#FF5A5F] hover:text-[#FF5A5F] text-gray-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+        >
+          <FolderPlus className="w-3.5 h-3.5" /> New Deck
+        </button>
+
+        {/* New Deck Modal */}
+        {showDeckInput && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
+            onClick={() => { setShowDeckInput(false); setNewDeckName(''); }}
           >
-            <FolderPlus className="w-3.5 h-3.5" /> + New Deck
-          </button>
+            <div
+              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 flex flex-col gap-5"
+              style={{ animation: 'deckModalIn 0.2s cubic-bezier(0.34,1.56,0.64,1)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#FF5A5F]/10">
+                    <FolderPlus className="w-4 h-4 text-[#FF5A5F]" />
+                  </div>
+                  <h2 className="text-sm font-bold text-gray-800">Create New Deck</h2>
+                </div>
+                <button
+                  onClick={() => { setShowDeckInput(false); setNewDeckName(''); }}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateDeck} className="flex flex-col gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">Deck Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Biology, History..."
+                    value={newDeckName}
+                    onChange={e => setNewDeckName(e.target.value)}
+                    onKeyDown={e => e.key === 'Escape' && (setShowDeckInput(false), setNewDeckName(''))}
+                    autoFocus
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/30 focus:border-[#FF5A5F] transition-all"
+                  />
+                  {newDeckName.length > 0 && newDeckName.trim().length < 3 && (
+                    <p className="text-[11px] text-amber-500 font-semibold mt-1.5 ml-1">
+                      {3 - newDeckName.trim().length} more character{3 - newDeckName.trim().length !== 1 ? 's' : ''} needed
+                    </p>
+                  )}
+                  {/* Colour dots — no label, just pick */}
+                  <div className="flex items-center gap-2 mt-2.5">
+                    {['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#f97316'].map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewDeckColor(c)}
+                        className="w-5 h-5 rounded-full transition-all duration-150"
+                        style={{
+                          backgroundColor: c,
+                          transform: newDeckColor === c ? 'scale(1.35)' : 'scale(1)',
+                          boxShadow: newDeckColor === c ? `0 0 0 2px white, 0 0 0 3.5px ${c}` : 'none'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeckInput(false); setNewDeckName(''); }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={newDeckName.trim().length < 3}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#FF5A5F] hover:bg-[#FF385C] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Create Deck
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </div>
 
@@ -352,17 +418,41 @@ const FlashcardManager = () => {
                     </h3>
 
                     {editingId === card._id ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400">Deck:</span>
-                        <select
-                          value={editForm.deck || 'General'}
-                          onChange={e => setEditForm({ ...editForm, deck: e.target.value })}
-                          className="px-3 py-1 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+                      <div className="relative flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Deck</span>
+                        <button
+                          type="button"
+                          onClick={() => setOpenDeckDropdown(openDeckDropdown === card._id ? null : card._id)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border transition-all"
+                          style={{
+                            backgroundColor: `${getDeckColor(editForm.deck || 'General')}15`,
+                            color: getDeckColor(editForm.deck || 'General'),
+                            borderColor: `${getDeckColor(editForm.deck || 'General')}40`
+                          }}
                         >
-                          {decks.map(d => (
-                            <option key={d._id || d.name} value={d.name}>{d.name}</option>
-                          ))}
-                        </select>
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getDeckColor(editForm.deck || 'General') }} />
+                          {editForm.deck || 'General'}
+                          <svg className="w-3 h-3 ml-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        {openDeckDropdown === card._id && (
+                          <div className="absolute top-full right-0 mt-1 z-20 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 min-w-[140px] flex flex-col gap-0.5">
+                            {decks.map(d => (
+                              <button
+                                key={d._id || d.name}
+                                type="button"
+                                onClick={() => { setEditForm({ ...editForm, deck: d.name }); setOpenDeckDropdown(null); }}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold w-full text-left transition-colors hover:bg-gray-50"
+                                style={{ color: d.color || '#FF9532' }}
+                              >
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color || '#FF9532' }} />
+                                {d.name}
+                                {(editForm.deck || 'General') === d.name && (
+                                  <svg className="w-3.5 h-3.5 ml-auto" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 011.414-1.414L8.414 12.172l6.879-6.879a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <span

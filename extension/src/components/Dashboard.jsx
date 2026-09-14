@@ -8,7 +8,8 @@ import {
   Pencil,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Tag
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -16,6 +17,7 @@ import api from '../api';
 
 const Dashboard = () => {
   const [dueCards, setDueCards] = useState([]);
+  const [decks, setDecks] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,8 +36,14 @@ const Dashboard = () => {
     let ignore = false;
     const fetchCards = async () => {
       try {
-        const { data } = await api.get('/recall/due');
-        if (!ignore) setDueCards(data);
+        const [cardsRes, decksRes] = await Promise.all([
+          api.get('/recall/due'),
+          api.get('/decks')
+        ]);
+        if (!ignore) {
+          setDueCards(cardsRes.data);
+          setDecks(decksRes.data);
+        }
       } catch (error) {
         console.error('Failed to fetch due cards:', error);
       } finally {
@@ -47,6 +55,11 @@ const Dashboard = () => {
       ignore = true;
     };
   }, []);
+
+  const getDeckColor = (deckName) => {
+    const found = decks.find(d => d.name.toLowerCase() === (deckName || 'general').toLowerCase());
+    return found?.color || '#FF9532';
+  };
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -138,9 +151,9 @@ const Dashboard = () => {
         prev.map((c, idx) =>
           idx === currentCardIndex
             ? {
-                ...c,
-                question: data.question || editQuestion.trim()
-              }
+              ...c,
+              question: data.question || editQuestion.trim()
+            }
             : c
         )
       );
@@ -409,6 +422,16 @@ const Dashboard = () => {
             transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
           }}
         >
+          {/* Deck badge — top-left corner */}
+          {currentCard.deck && currentCard.deck.toLowerCase() !== 'general' && (
+            <span
+              className="absolute top-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{ backgroundColor: `${getDeckColor(currentCard.deck)}18`, color: getDeckColor(currentCard.deck) }}
+            >
+              <Tag className="w-2.5 h-2.5" />
+              {currentCard.deck}
+            </span>
+          )}
           <div className="flex flex-col items-center max-w-full px-2">
             <div className="flex items-center gap-1.5 mb-4 group/edit">
               <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
