@@ -59,6 +59,34 @@ onBackgroundMessage(messaging, (payload) => {
   });
 });
 
+import { getToken } from "firebase/messaging/sw";
+
+const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
+
+const syncFcmToken = async () => {
+  try {
+    console.log("[background.js] Generating FCM Token...");
+    
+    // In MV3 background scripts, self.registration is the service worker registration!
+    const fcmToken = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: self.registration
+    });
+
+    if (fcmToken) {
+      await fetchWithAuth(`${API_URL}/auth/fcm-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token: fcmToken })
+      });
+      console.log("[background.js] FCM Token successfully generated and saved to backend!");
+    }
+  } catch (e) {
+    console.error("[background.js] Failed to generate/sync FCM Token", e);
+  }
+};
+
 // Helper to create menus
 function createMenus() {
   chrome.contextMenus.removeAll(() => {
@@ -92,67 +120,68 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "save-to-ormayundo") {
 
-// Ask the content script on the active tab for the Markdown text
-chrome.tabs.sendMessage(tab.id, {
-  action: 'EXTRACT_SELECTION'
-}, async (response) => {
+    const handleSave = async (selectedText) => {
+      if (!selectedText || selectedText.trim().length < 20) {
+        console.warn('[background.js] Selection too short or empty, aborting save.');
+        return;
+      }
 
-  if (chrome.runtime.lastError) {
-    console.error('[background.js] Content script runtime error:', chrome.runtime.lastError.message);
-    chrome.action.setBadgeText({ text: 'X' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-    return;
-  }
+      const sourceUrl = tab && tab.url ? tab.url : '';
+      if (!sourceUrl) {
+        console.error('[background.js] Tab URL missing, cannot save recall.');
+        chrome.action.setBadgeText({ text: 'X' });
+        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+        return;
+      }
 
-  if (!response || response.error) {
-    console.error('[background.js] Error from content script:', response?.error || response);
-    chrome.action.setBadgeText({ text: 'X' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-    return;
-  }
+      console.log('[background.js] Right-click menu clicked! Saving text:', selectedText);
+      chrome.action.setBadgeText({ text: '...' });
+      chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
 
-  const selectedText = response.text;
-  if (!selectedText || selectedText.trim().length < 20) {
-    console.warn('[background.js] Selection too short or empty, aborting save.');
-    return;
-  }
+      try {
+        const payload = { selectedText, sourceUrl };
+        console.log('[background.js] Payload being sent:', payload);
+        const res = await fetchWithAuth(`${API_URL}/recall`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        console.log('[background.js] Successfully saved to backend!');
+        chrome.action.setBadgeText({ text: '✓' });
+        chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
+        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+      } catch (error) {
+        console.error('[background.js] Error saving from context menu:', error);
+        chrome.action.setBadgeText({ text: 'X' });
+        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+      }
+    };
 
-  const sourceUrl = tab && tab.url ? tab.url : '';
-  if (!sourceUrl) {
-    console.error('[background.js] Tab URL missing, cannot save recall.');
-    chrome.action.setBadgeText({ text: 'X' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-    return;
-  }
+    // Ask the content script on the active tab for the Markdown text
+    chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_SELECTION' }, async (response) => {
+      let selectedText = response?.text;
 
-  console.log('[background.js] Right-click menu clicked! Saving text:', selectedText);
-  chrome.action.setBadgeText({ text: '...' });
-  chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+      if (chrome.runtime.lastError || !response || response.error || !selectedText) {
+        // Fallback: If content script is missing or fails, just use the native selection text
+        if (info.selectionText) {
+          selectedText = info.selectionText;
+        } else {
+          console.error('[background.js] Error from content script and no native selection available:', chrome.runtime.lastError?.message || response?.error);
+          chrome.action.setBadgeText({ text: 'X' });
+          chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+          setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+          return;
+        }
+      }
 
-  try {
-    const payload = { selectedText, sourceUrl };
-    console.log('[background.js] Payload being sent:', payload);
-    const res = await fetchWithAuth(`${API_URL}/recall`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(payload)
+      await handleSave(selectedText);
     });
-    if (!res.ok) throw new Error('Server returned ' + res.status);
-    console.log('[background.js] Successfully saved to backend!');
-    chrome.action.setBadgeText({ text: '✓' });
-    chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-  } catch (error) {
-    console.error('[background.js] Error saving from context menu:', error);
-    chrome.action.setBadgeText({ text: 'X' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-  }
-});
+
+
   }
 });
 
@@ -160,8 +189,11 @@ chrome.tabs.sendMessage(tab.id, {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'USER_LOGIN') {
     createMenus();
+    syncFcmToken();
   } else if (request.action === 'USER_LOGOUT') {
     chrome.contextMenus.removeAll();
+  } else if (request.action === 'SYNC_FCM_TOKEN') {
+    syncFcmToken();
   }
 });
 

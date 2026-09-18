@@ -31,7 +31,7 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
   // 2. Call AI Generation & Classification
   console.log(`[BullMQ] Starting AI Generation with decks [${userDeckNames.join(', ')}]...`);
   try {
-    const { question, deck } = await generateRecallQuestion(selectedText, userDeckNames);
+    const { question, deck } = await generateRecallQuestion(selectedText, userDeckNames, sourceUrl);
     console.log(`[BullMQ] AI Generation successful! Question: "${question}", Assigned Deck: "${deck}"`);
 
     // 3. Save to DB

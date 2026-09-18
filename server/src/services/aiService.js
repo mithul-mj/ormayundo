@@ -5,11 +5,12 @@ const groq = new Groq({
   apiKey: process.env.AI_API_KEY
 });
 
-export const generateRecallQuestion = async (selectedText, userDecks = ['General']) => {
+export const generateRecallQuestion = async (selectedText, userDecks = ['General'], sourceUrl = '') => {
   const decksList = Array.isArray(userDecks) && userDecks.length > 0 ? userDecks.join(', ') : 'General';
   const prompt = FLASHCARD_GENERATION_PROMPT
     .replace('{{DATA}}', selectedText)
-    .replace('{{DECKS}}', decksList);
+    .replace('{{DECKS}}', decksList)
+    .replace('{{URL}}', sourceUrl);
 
   try {
     console.log(`[AI] Sending request to Groq with decks: [${decksList}]...`);

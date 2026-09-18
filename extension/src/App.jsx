@@ -4,22 +4,6 @@ import Dashboard from './components/Dashboard';
 import './index.css';
 import { API_URL } from './config';
 
-import { initializeApp } from "firebase/app";
-import { getMessaging, getToken } from "firebase/messaging";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDysR_QcERUV1mH0OSjkIKeOo2nm9edobc",
-  authDomain: "ormayundo-4f8c5.firebaseapp.com",
-  projectId: "ormayundo-4f8c5",
-  storageBucket: "ormayundo-4f8c5.firebasestorage.app",
-  messagingSenderId: "261551023957",
-  appId: "1:261551023957:web:5c28db3528f113244d31dc",
-  measurementId: "G-1KZ9ST0Q4S"
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,33 +36,9 @@ function App() {
     }
   }, []);
 
-  const syncFcmToken = async () => {
-    try {
-      console.log("Generating FCM Token...");
-
-      // In Chrome Extensions, we must pass the existing background service worker registration!
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) {
-        console.error("No service worker registration found for Firebase.");
-        return;
-      }
-
-      const fcmToken = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: registration
-      });
-
-      if (fcmToken) {
-        await fetch(`${API_URL}/auth/fcm-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ token: fcmToken })
-        });
-        console.log("FCM Token successfully generated and saved to backend!");
-      }
-    } catch (e) {
-      console.error("Failed to generate/sync FCM Token", e);
+  const syncFcmToken = () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({ action: 'SYNC_FCM_TOKEN' });
     }
   };
 

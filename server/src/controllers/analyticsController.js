@@ -7,6 +7,7 @@ export const getAnalytics = async (req, res) => {
 
     let newCards = 0;
     let learningCards = 0;
+    let relearningCards = 0;
     let masteredCards = 0;
 
     const sources = {};
@@ -34,18 +35,29 @@ export const getAnalytics = async (req, res) => {
     };
 
     const now = new Date();
-    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-    const threeDays = new Date(now); threeDays.setDate(threeDays.getDate() + 3);
-    const nextWeek = new Date(now); nextWeek.setDate(nextWeek.getDate() + 7);
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+    
+    const endOfTomorrow = new Date(endOfToday);
+    endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+    
+    const endOfThreeDays = new Date(endOfToday);
+    endOfThreeDays.setDate(endOfThreeDays.getDate() + 3);
+    
+    const endOfNextWeek = new Date(endOfToday);
+    endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
 
     cards.forEach(card => {
       // 1. Mastery Breakdown (Active cards only)
       if (card.status !== 'archived') {
-        if (card.reviewCount <= 1) newCards++;
-        else {
-          const interval = card.lastReviewedAt ? (card.nextReviewAt - card.lastReviewedAt) / (1000 * 60 * 60 * 24) : 0;
-          if (interval > 21) masteredCards++;
-          else learningCards++;
+        if (card.reviewCount === 0) {
+          newCards++;
+        } else if (card.correctCount === 0) {
+          relearningCards++;
+        } else if (card.interval >= 21) {
+          masteredCards++;
+        } else {
+          learningCards++;
         }
       }
 
@@ -73,10 +85,10 @@ export const getAnalytics = async (req, res) => {
 
       // 5. Workload (Active cards only)
       if (card.status !== 'archived') {
-        if (card.nextReviewAt <= now) upcoming['Today']++;
-        else if (card.nextReviewAt <= tomorrow) upcoming['Tomorrow']++;
-        else if (card.nextReviewAt <= threeDays) upcoming['In 3 Days']++;
-        else if (card.nextReviewAt <= nextWeek) upcoming['Next Week']++;
+        if (card.nextReviewAt <= endOfToday) upcoming['Today']++;
+        else if (card.nextReviewAt <= endOfTomorrow) upcoming['Tomorrow']++;
+        else if (card.nextReviewAt <= endOfThreeDays) upcoming['In 3 Days']++;
+        else if (card.nextReviewAt <= endOfNextWeek) upcoming['Next Week']++;
         else upcoming['Later']++;
       }
     });
@@ -165,6 +177,7 @@ export const getAnalytics = async (req, res) => {
       mastery: [
         { name: 'New', value: newCards, fill: '#3b82f6' },
         { name: 'Learning', value: learningCards, fill: '#f59e0b' },
+        { name: 'Relearning', value: relearningCards, fill: '#ef4444' },
         { name: 'Mastered', value: masteredCards, fill: '#10b981' }
       ],
       sources: topSources,

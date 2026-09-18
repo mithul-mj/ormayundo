@@ -61,6 +61,32 @@ const Dashboard = () => {
     return found?.color || '#FF9532';
   };
 
+  const getNextIntervalText = (ratingStr) => {
+    if (!dueCards[currentCardIndex]) return '';
+    const card = dueCards[currentCardIndex];
+
+    const ratingMap = { forgot: 1, hard: 3, good: 4, easy: 5 };
+    const grade = ratingMap[ratingStr] || 1;
+
+    let interval = card.interval || 0;
+    let repetitions = card.correctCount || 0;
+    let easinessFactor = card.easinessFactor || 2.5;
+
+    if (grade >= 3) {
+      if (repetitions === 0) {
+        interval = 1;
+      } else if (repetitions === 1) {
+        interval = 6;
+      } else {
+        interval = Math.round(interval * easinessFactor);
+      }
+    } else {
+      interval = 1;
+    }
+
+    return interval === 1 ? '1 day' : `${interval} days`;
+  };
+
   const showToast = (message) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -494,7 +520,7 @@ const Dashboard = () => {
             className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Forgot</span>
-            <span className="text-[10px] text-gray-500 mt-1">1 min</span>
+            <span className="text-[10px] text-gray-500 mt-1">{getNextIntervalText('forgot')}</span>
           </button>
 
           <button
@@ -502,7 +528,7 @@ const Dashboard = () => {
             className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Hard</span>
-            <span className="text-[10px] text-gray-500 mt-1">3 mins</span>
+            <span className="text-[10px] text-gray-500 mt-1">{getNextIntervalText('hard')}</span>
           </button>
 
           <button
@@ -510,7 +536,7 @@ const Dashboard = () => {
             className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-blue-100 hover:text-blue-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Good</span>
-            <span className="text-[10px] text-gray-500 mt-1">5 mins</span>
+            <span className="text-[10px] text-gray-500 mt-1">{getNextIntervalText('good')}</span>
           </button>
 
           <button
@@ -518,7 +544,7 @@ const Dashboard = () => {
             className="flex flex-col items-center p-3 rounded-xl bg-gray-100 hover:bg-green-100 hover:text-green-600 transition-colors cursor-pointer"
           >
             <span className="font-bold text-sm">Easy</span>
-            <span className="text-[10px] text-gray-500 mt-1">10 mins</span>
+            <span className="text-[10px] text-gray-500 mt-1">{getNextIntervalText('easy')}</span>
           </button>
         </div>
       ) : (
