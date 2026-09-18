@@ -59,14 +59,14 @@ onBackgroundMessage(messaging, (payload) => {
   });
 });
 
-import { getToken } from "firebase/messaging/sw";
+import { getToken } from "firebase/messaging";
 
 const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
 
 const syncFcmToken = async () => {
   try {
     console.log("[background.js] Generating FCM Token...");
-    
+
     // In MV3 background scripts, self.registration is the service worker registration!
     const fcmToken = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -291,7 +291,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
     sendHighlights(activeInfo.tabId, tab.url);
-  } catch (_) {}
+  } catch (_) { }
 });
 
 

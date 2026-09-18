@@ -71,20 +71,28 @@ const Dashboard = () => {
     let interval = card.interval || 0;
     let repetitions = card.correctCount || 0;
     let easinessFactor = card.easinessFactor || 2.5;
+    let learningStep = card.learningStep || 0;
+    let isGraduated = card.isGraduated || false;
 
-    if (grade >= 3) {
-      if (repetitions === 0) {
-        interval = 1;
-      } else if (repetitions === 1) {
-        interval = 6;
-      } else {
-        interval = Math.round(interval * easinessFactor);
+    if (!isGraduated) {
+      if (ratingStr === 'forgot') return '<1m';
+      if (ratingStr === 'hard') return '5m';
+      if (ratingStr === 'good') {
+        if (learningStep === 0) return '10m';
+        return '1d';
       }
+      if (ratingStr === 'easy') return '4d';
     } else {
-      interval = 1;
+      if (grade >= 3) {
+        if (repetitions === 0) interval = 1;
+        else if (repetitions === 1) interval = 6;
+        else interval = Math.round(interval * easinessFactor);
+        return interval === 1 ? '1d' : `${interval}d`;
+      } else {
+        return '<1m';
+      }
     }
-
-    return interval === 1 ? '1 day' : `${interval} days`;
+    return '1d';
   };
 
   const showToast = (message) => {

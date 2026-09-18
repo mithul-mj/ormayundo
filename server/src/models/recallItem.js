@@ -39,6 +39,14 @@ const recallItemSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    learningStep: {
+        type: Number,
+        default: 0
+    },
+    isGraduated: {
+        type: Boolean,
+        default: false
+    },
     reviewHistory: [{
         reviewedAt: { type: Date, default: Date.now },
         rating: { type: String, enum: ['forgot', 'hard', 'good', 'easy'] },

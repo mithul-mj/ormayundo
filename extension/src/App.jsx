@@ -103,14 +103,12 @@ function App() {
             >
               <span>Auto-Popup</span>
               <div
-                className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                  popupEnabled ? 'bg-[#FF385C]' : 'bg-gray-200'
-                }`}
+                className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${popupEnabled ? 'bg-[#FF385C]' : 'bg-gray-200'
+                  }`}
               >
                 <div
-                  className={`bg-white w-3.5 h-3.5 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
-                    popupEnabled ? 'translate-x-3.5' : 'translate-x-0'
-                  }`}
+                  className={`bg-white w-3.5 h-3.5 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${popupEnabled ? 'translate-x-3.5' : 'translate-x-0'
+                    }`}
                 />
               </div>
             </button>

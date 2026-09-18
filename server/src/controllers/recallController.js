@@ -77,7 +77,7 @@ export const getDueItems = async (req, res) => {
     userId: req.user._id,
     status: 'active',
     nextReviewAt: { $lte: new Date() } // $lte means "Less Than or Equal to" today
-  }).sort({ nextReviewAt: 1 }); // Sort oldest first
+  }).sort({ isGraduated: 1, nextReviewAt: 1 }); // Show new/learning cards first, then oldest due
 
   res.status(STATUS_CODES.OK).json(dueItems);
 };
@@ -98,17 +98,28 @@ export const reviewRecallItem = async (req, res) => {
   }
 
   // 2. Calculate the next review date using SM-2 engine
-  const { nextReviewAt, newInterval, newRepetitions, newEasinessFactor } = calculateNextReview(
+  const { 
+    nextReviewAt, 
+    newInterval, 
+    newRepetitions, 
+    newEasinessFactor,
+    newLearningStep,
+    newIsGraduated
+  } = calculateNextReview(
     item.interval || 0,
     item.correctCount || 0,
     item.easinessFactor || 2.5,
-    rating
+    rating,
+    item.learningStep || 0,
+    item.isGraduated || false
   );
 
   // 3. Update the item
   item.interval = newInterval;
   item.correctCount = newRepetitions;
   item.easinessFactor = newEasinessFactor;
+  item.learningStep = newLearningStep;
+  item.isGraduated = newIsGraduated;
   item.nextReviewAt = nextReviewAt;
   item.lastReviewedAt = new Date();
   item.notificationSent = false; // CRITICAL: Reset the memory flag for the next cycle!
