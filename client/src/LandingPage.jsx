@@ -18,13 +18,14 @@ import {
   Tag,
   Star,
   Zap,
-  MousePointerClick
+  ExternalLink,
+  Eye,
+  Maximize2
 } from 'lucide-react';
 
 export default function LandingPage({ onGetStarted, isAuthenticated }) {
-  const [activePreviewTab, setActivePreviewTab] = useState('extension'); // 'extension' | 'dashboard' | 'manager'
-  const [cardFlipped, setCardFlipped] = useState(false);
   const [copiedStep, setCopiedStep] = useState(false);
+  const [activeModalImg, setActiveModalImg] = useState(null);
 
   const copyChromeUrl = () => {
     navigator.clipboard.writeText('chrome://extensions');
@@ -35,7 +36,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
   return (
     <div className="min-h-screen bg-white text-[#222222] flex flex-col font-sans selection:bg-[#FF385C]/15 selection:text-[#FF385C]">
       {/* 1. Header / Navbar (Airbnb Style) */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#EBEBEB]">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
           {/* Logo */}
           <div
@@ -52,20 +53,20 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
 
           {/* Navigation Links (Airbnb Pill Style) */}
           <nav className="hidden md:flex items-center gap-1 bg-[#F7F7F7] p-1.5 rounded-full border border-[#EBEBEB] text-xs font-semibold text-[#717171]">
-            <a href="#preview" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
-              Product Tour
+            <a href="#showcase-extension" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
+              Extension in Action
+            </a>
+            <a href="#showcase-dashboard" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
+              Brain Dashboard
+            </a>
+            <a href="#showcase-manager" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
+              Manage Decks
             </a>
             <a href="#how-it-works" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
               How It Works
             </a>
             <a href="#download" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
-              Extension ZIP
-            </a>
-            <a href="#science" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
-              Spaced Repetition
-            </a>
-            <a href="#features" className="px-4 py-1.5 rounded-full hover:text-[#222222] hover:bg-white transition-all">
-              Features
+              Download ZIP
             </a>
           </nav>
 
@@ -91,13 +92,13 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
       </header>
 
       {/* 2. Hero Section (Airbnb Editorial Style) */}
-      <section className="relative pt-14 pb-20 md:pt-20 md:pb-28 overflow-hidden bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 text-center">
+      <section className="relative pt-12 pb-16 md:pt-16 md:pb-24 overflow-hidden bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 text-center">
           {/* Subtle Tag */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F7F7F7] border border-[#EBEBEB] text-[#222222] text-xs font-semibold mb-6">
             <span className="w-2 h-2 rounded-full bg-[#FF385C] animate-pulse" />
             <span>AI Active Recall • SuperMemo SM-2 Engine</span>
-            <span className="text-[#717171]">• 100% Free</span>
+            <span className="text-[#717171]">• 100% Free Unpacked Extension</span>
           </div>
 
           {/* Headline */}
@@ -108,18 +109,18 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
 
           {/* Subtitle */}
           <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-[#717171] font-normal leading-relaxed mb-10">
-            Highlight any key sentence or code fragment on any website. Ormayundo turns it into high-yield active-recall flashcards with mathematically scheduled spaced repetition.
+            Highlight any sentence or code block on any website. Ormayundo turns it into high-yield active-recall flashcards with mathematically scheduled spaced repetition.
           </p>
 
-          {/* Airbnb Iconic Floating Pill Bar */}
-          <div className="max-w-3xl mx-auto mb-12 p-2 sm:p-2.5 bg-white border border-[#DDDDDD] rounded-full shadow-[0_6px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)] transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+          {/* Airbnb Iconic Floating Search/Action Pill Bar */}
+          <div className="max-w-3xl mx-auto mb-14 p-2 sm:p-2.5 bg-white border border-[#DDDDDD] rounded-full shadow-[0_6px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)] transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
             <div className="flex-1 px-4 sm:px-6 py-1.5 sm:border-r border-[#EBEBEB] w-full sm:w-auto">
               <span className="block text-[11px] font-bold text-[#222222] uppercase tracking-wider">Highlight</span>
-              <span className="text-xs text-[#717171] font-medium truncate block">Select text on any webpage</span>
+              <span className="text-xs text-[#717171] font-medium truncate block">Select text on Wikipedia, MDN, blogs</span>
             </div>
             <div className="flex-1 px-4 sm:px-6 py-1.5 sm:border-r border-[#EBEBEB] w-full sm:w-auto">
-              <span className="block text-[11px] font-bold text-[#222222] uppercase tracking-wider">AI Synthesis</span>
-              <span className="text-xs text-[#717171] font-medium truncate block">Generates active recall questions</span>
+              <span className="block text-[11px] font-bold text-[#222222] uppercase tracking-wider">AI Question</span>
+              <span className="text-xs text-[#717171] font-medium truncate block">Generates active recall cards</span>
             </div>
             <div className="flex-1 px-4 sm:px-6 py-1.5 w-full sm:w-auto">
               <span className="block text-[11px] font-bold text-[#222222] uppercase tracking-wider">Spaced Recall</span>
@@ -137,298 +138,432 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
             </a>
           </div>
 
-          {/* Social Proof / Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-semibold text-[#717171]">
-            <div className="flex items-center gap-1.5 text-[#222222]">
-              <Star className="w-4 h-4 fill-[#FF385C] text-[#FF385C]" />
-              <span className="font-bold">4.98</span>
-              <span className="text-[#717171] font-normal">(Learning Retention)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
-              <span>SuperMemo-2 Spaced Repetition</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
-              <span>Zero Browsing Tracking</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
-              <span>Free Unpacked Extension</span>
-            </div>
-          </div>
-        </div>
-      </section>
+          {/* Real In-Action Hero Screenshot */}
+          <div className="relative max-w-5xl mx-auto">
+            {/* Ambient Background Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#FF385C]/20 via-[#FF9532]/10 to-[#FF385C]/20 rounded-3xl blur-2xl opacity-60 -z-10" />
 
-      {/* 3. Interactive Product Showcase (Airbnb Clean Cards) */}
-      <section id="preview" className="py-16 bg-[#F7F7F7] border-y border-[#EBEBEB]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mb-3">
-              Experience the Product
-            </h2>
-            <p className="text-[#717171] max-w-lg mx-auto text-sm sm:text-base">
-              Interactive previews of the Chrome extension popup and the full web dashboard.
-            </p>
-
-            {/* Segmented Filter Pills */}
-            <div className="inline-flex p-1 bg-white rounded-full mt-6 border border-[#DDDDDD] shadow-xs">
-              <button
-                onClick={() => setActivePreviewTab('extension')}
-                className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activePreviewTab === 'extension' ? 'bg-[#222222] text-white shadow-sm' : 'text-[#717171] hover:text-[#222222]'}`}
-              >
-                Chrome Extension & Popup
-              </button>
-              <button
-                onClick={() => setActivePreviewTab('dashboard')}
-                className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activePreviewTab === 'dashboard' ? 'bg-[#222222] text-white shadow-sm' : 'text-[#717171] hover:text-[#222222]'}`}
-              >
-                Analytics Dashboard
-              </button>
-              <button
-                onClick={() => setActivePreviewTab('manager')}
-                className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activePreviewTab === 'manager' ? 'bg-[#222222] text-white shadow-sm' : 'text-[#717171] hover:text-[#222222]'}`}
-              >
-                Flashcard Manager
-              </button>
-            </div>
-          </div>
-
-          {/* TAB 1: EXTENSION PREVIEW */}
-          {activePreviewTab === 'extension' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center animate-in fade-in duration-300">
-              {/* Left: Webpage Highlight Simulator */}
-              <div className="lg:col-span-7 bg-white border border-[#EBEBEB] rounded-3xl p-6 sm:p-8 shadow-[0_6px_20px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center gap-2 pb-4 mb-5 border-b border-[#EBEBEB] text-xs text-[#717171] font-mono">
-                  <div className="w-3 h-3 rounded-full bg-[#FF5A5F]" />
-                  <div className="w-3 h-3 rounded-full bg-[#FF9532]" />
-                  <div className="w-3 h-3 rounded-full bg-[#008A05]" />
-                  <span className="ml-2 truncate text-[#717171]">https://developer.mozilla.org/articles/event-loop</span>
-                </div>
-
-                <div className="relative text-left space-y-4 text-sm text-[#222222] leading-relaxed">
-                  <h3 className="text-xl font-extrabold text-[#222222] tracking-tight">Understanding the JavaScript Event Loop</h3>
-                  <p className="text-[#717171]">
-                    JavaScript executes all tasks on a single thread using an event loop architecture that schedules asynchronous callbacks and promises.
-                  </p>
-
-                  {/* Highlight Box */}
-                  <div className="relative p-4 bg-[#FF385C]/10 border-l-4 border-[#FF385C] rounded-r-2xl">
-                    <p className="font-semibold text-[#222222]">
-                      "Microtasks (e.g. Promise callbacks) execute immediately after each macrotask completes and are completely drained before the next timer or event fires."
-                    </p>
-
-                    {/* Floating Save Button */}
-                    <div className="absolute -bottom-4 right-4 z-20 flex items-center gap-1.5 bg-[#222222] text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl border border-black/10">
-                      <Sparkles className="w-3.5 h-3.5 text-[#FF385C]" />
-                      <span>Save to Ormayundo ✓</span>
-                    </div>
-                  </div>
-
-                  <p className="text-[#717171] text-xs pt-3">
-                    💡 Selecting text triggers the floating save button. AI synthesizes an active-recall question and files it into your deck in the background.
-                  </p>
-                </div>
-              </div>
-
-              {/* Right: Authentic Extension Popup Simulator */}
-              <div className="lg:col-span-5 flex flex-col items-center">
-                <div className="w-full max-w-[360px] bg-white border border-[#EBEBEB] rounded-3xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] p-6 flex flex-col items-center">
-                  {/* Popup Header */}
-                  <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-[#EBEBEB]">
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-5 h-5 text-[#FF385C]" />
-                      <span className="font-bold text-sm text-[#222222]">Active Recall</span>
-                    </div>
-                    <span className="text-[11px] font-bold bg-[#FF385C]/10 text-[#FF385C] px-3 py-1 rounded-full">
-                      1 Card Due
-                    </span>
-                  </div>
-
-                  {/* The Interactive Flashcard */}
-                  <div
-                    onClick={() => setCardFlipped(!cardFlipped)}
-                    className="w-full h-52 rounded-2xl cursor-pointer transition-all duration-300 relative p-5 flex flex-col justify-between text-center select-none shadow-sm hover:shadow-md"
-                    style={{
-                      backgroundColor: cardFlipped ? '#FF385C' : '#FFFFFF',
-                      color: cardFlipped ? '#FFFFFF' : '#222222',
-                      border: cardFlipped ? '1px solid #E61E4D' : '1px solid #DDDDDD'
-                    }}
-                  >
-                    <div className="flex justify-between items-center w-full">
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${cardFlipped ? 'bg-white/20 text-white' : 'bg-[#F7F7F7] text-[#222222] border border-[#EBEBEB]'}`}>
-                        JavaScript
-                      </span>
-                      <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
-                        {cardFlipped ? 'Answer' : 'Question'}
-                      </span>
-                    </div>
-
-                    <div className="my-auto px-2">
-                      {cardFlipped ? (
-                        <p className="text-xs sm:text-sm font-medium leading-relaxed">
-                          Microtasks (e.g. Promise callbacks) take precedence and are drained entirely after every macrotask before timers run.
-                        </p>
-                      ) : (
-                        <p className="text-sm font-bold leading-snug">
-                          How does the execution priority of microtasks compare to macrotasks in the event loop?
-                        </p>
-                      )}
-                    </div>
-
-                    <span className="text-[10px] opacity-70">
-                      Click to flip ({cardFlipped ? 'show question' : 'show answer'})
-                    </span>
-                  </div>
-
-                  {/* Rating Buttons with Accurate Intervals */}
-                  <div className="w-full grid grid-cols-4 gap-2 mt-4">
-                    <button className="flex flex-col items-center p-2.5 rounded-xl bg-[#F7F7F7] hover:bg-red-50 text-[#222222] hover:text-[#FF385C] transition-colors border border-[#EBEBEB] cursor-pointer">
-                      <span className="font-bold text-xs">Forgot</span>
-                      <span className="text-[10px] text-[#717171] mt-0.5">&lt;1m</span>
-                    </button>
-                    <button className="flex flex-col items-center p-2.5 rounded-xl bg-[#F7F7F7] hover:bg-orange-50 text-[#222222] hover:text-orange-600 transition-colors border border-[#EBEBEB] cursor-pointer">
-                      <span className="font-bold text-xs">Hard</span>
-                      <span className="text-[10px] text-[#717171] mt-0.5">2d</span>
-                    </button>
-                    <button className="flex flex-col items-center p-2.5 rounded-xl bg-[#F7F7F7] hover:bg-blue-50 text-[#222222] hover:text-blue-600 transition-colors border border-[#EBEBEB] cursor-pointer">
-                      <span className="font-bold text-xs">Good</span>
-                      <span className="text-[10px] text-[#717171] mt-0.5">6d</span>
-                    </button>
-                    <button className="flex flex-col items-center p-2.5 rounded-xl bg-[#F7F7F7] hover:bg-emerald-50 text-[#222222] hover:text-[#008A05] transition-colors border border-[#EBEBEB] cursor-pointer">
-                      <span className="font-bold text-xs">Easy</span>
-                      <span className="text-[10px] text-[#717171] mt-0.5">8d</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: ANALYTICS DASHBOARD PREVIEW */}
-          {activePreviewTab === 'dashboard' && (
-            <div className="bg-white border border-[#EBEBEB] rounded-3xl p-6 sm:p-8 shadow-[0_6px_20px_rgba(0,0,0,0.04)] animate-in fade-in duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-[#F7F7F7] p-5 rounded-2xl border border-[#EBEBEB] flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                    <Flame className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-[#717171] uppercase tracking-wider">Streak</span>
-                    <h4 className="text-2xl font-extrabold text-[#222222]">7 Days 🔥</h4>
-                  </div>
-                </div>
-
-                <div className="bg-[#F7F7F7] p-5 rounded-2xl border border-[#EBEBEB] flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-[#008A05] flex items-center justify-center font-bold">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-[#717171] uppercase tracking-wider">Retention</span>
-                    <h4 className="text-2xl font-extrabold text-[#222222]">92.4%</h4>
-                  </div>
-                </div>
-
-                <div className="bg-[#F7F7F7] p-5 rounded-2xl border border-[#EBEBEB] flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-[#FF385C] flex items-center justify-center font-bold">
-                    <BookOpen className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-[#717171] uppercase tracking-wider">Active Cards</span>
-                    <h4 className="text-2xl font-extrabold text-[#222222]">142</h4>
-                  </div>
-                </div>
-
-                <div className="bg-[#F7F7F7] p-5 rounded-2xl border border-[#EBEBEB] flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-                    <BarChart3 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-[#717171] uppercase tracking-wider">Mastered</span>
-                    <h4 className="text-2xl font-extrabold text-[#222222]">68</h4>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="p-6 rounded-2xl bg-[#F7F7F7] border border-[#EBEBEB]">
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-bold text-[#222222] text-sm">Knowledge Mastery Breakdown</h4>
-                  <span className="text-xs text-[#717171]">142 total memory units</span>
-                </div>
-                <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden flex">
-                  <div style={{ width: '48%' }} className="bg-[#008A05] h-full" title="Mastered (48%)" />
-                  <div style={{ width: '32%' }} className="bg-[#FF385C] h-full" title="Learning (32%)" />
-                  <div style={{ width: '12%' }} className="bg-amber-400 h-full" title="Relearning (12%)" />
-                  <div style={{ width: '8%' }} className="bg-gray-300 h-full" title="New (8%)" />
-                </div>
-                <div className="flex flex-wrap items-center gap-6 mt-4 text-xs font-semibold text-[#717171]">
-                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#008A05]" /> Mastered (48%)</span>
-                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#FF385C]" /> Learning (32%)</span>
-                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-400" /> Relearning (12%)</span>
-                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-gray-300" /> New (8%)</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: FLASHCARD MANAGER PREVIEW */}
-          {activePreviewTab === 'manager' && (
-            <div className="bg-white border border-[#EBEBEB] rounded-3xl p-6 sm:p-8 shadow-[0_6px_20px_rgba(0,0,0,0.04)] space-y-4 animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-[#EBEBEB]">
+            {/* Browser Frame */}
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#DDDDDD] shadow-[0_16px_48px_rgba(0,0,0,0.12)] overflow-hidden">
+              {/* Browser Address Bar Header */}
+              <div className="bg-[#F7F7F7] px-4 py-3 border-b border-[#EBEBEB] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="px-3.5 py-1 bg-[#222222] text-white text-xs font-bold rounded-full">All (142)</span>
-                  <span className="px-3.5 py-1 bg-[#F7F7F7] text-[#222222] border border-[#EBEBEB] text-xs font-bold rounded-full">System Design</span>
-                  <span className="px-3.5 py-1 bg-[#F7F7F7] text-[#222222] border border-[#EBEBEB] text-xs font-bold rounded-full">JavaScript</span>
+                  <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E]" />
+                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123]" />
+                  <div className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29]" />
                 </div>
-                <span className="text-xs text-[#717171]">Full markdown & table support</span>
-              </div>
 
-              {/* Sample Card Rows */}
-              <div className="p-4 rounded-2xl bg-[#F7F7F7] border border-[#EBEBEB] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold bg-[#FF385C]/15 text-[#FF385C] px-2.5 py-0.5 rounded-full">System Design</span>
-                    <span className="text-xs text-[#717171] truncate max-w-[240px]">martinfowler.com/articles/cqrs</span>
-                  </div>
-                  <h5 className="font-bold text-[#222222] text-sm">What is the core premise of Command Query Responsibility Segregation (CQRS)?</h5>
-                  <p className="text-xs text-[#717171] line-clamp-1 italic">"CQRS strictly separates the data model for reading from the model used for updates..."</p>
+                <div className="flex-1 max-w-md bg-white border border-[#EBEBEB] rounded-full px-4 py-1 text-xs text-[#717171] font-mono flex items-center gap-2 shadow-xs">
+                  <span className="text-[#008A05]">https://</span>
+                  <span className="text-[#222222] font-semibold truncate">en.wikipedia.org/wiki/Steve_Jobs</span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-bold text-[#008A05] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">Interval: 15d</span>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-[#FF385C] bg-[#FF385C]/10 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Live Capture
+                  </span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#F7F7F7] border border-[#EBEBEB] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold bg-[#222222]/10 text-[#222222] px-2.5 py-0.5 rounded-full">JavaScript</span>
-                    <span className="text-xs text-[#717171] truncate max-w-[240px]">developer.mozilla.org</span>
-                  </div>
-                  <h5 className="font-bold text-[#222222] text-sm">What is the difference between shallow and deep copying of objects?</h5>
-                  <p className="text-xs text-[#717171] line-clamp-1 italic">"Shallow copy duplicates top-level properties while nested objects remain references..."</p>
+              {/* Real Full Image with Floating Annotation Overlays */}
+              <div className="relative group cursor-pointer" onClick={() => setActiveModalImg('/images/extension-in-action.jpg')}>
+                <img
+                  src="/images/extension-in-action.jpg"
+                  alt="Ormayundo Chrome Extension in action on Wikipedia"
+                  className="w-full h-auto block object-cover"
+                />
+
+                {/* Annotation Pin 1: Text Highlight & Save Button */}
+                <div className="absolute top-[42%] left-[24%] -translate-y-1/2 hidden md:flex items-center gap-2 bg-[#222222]/90 backdrop-blur-sm text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl border border-white/20 animate-bounce duration-1000">
+                  <span className="w-2 h-2 rounded-full bg-[#FF385C]" />
+                  <span>Highlight & Click "Save to Ormayundo"</span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Interval: 6d</span>
+
+                {/* Annotation Pin 2: Extension Popup & Question */}
+                <div className="absolute top-[28%] right-[8%] hidden md:flex items-center gap-2 bg-[#FF385C] text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl border border-white/30">
+                  <Brain className="w-3.5 h-3.5" />
+                  <span>AI Flashcard with Spaced Repetition</span>
+                </div>
+
+                {/* Hover to Expand Pill */}
+                <div className="absolute bottom-4 right-4 bg-black/75 hover:bg-black text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 backdrop-blur-md opacity-90 group-hover:opacity-100 transition-opacity">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Click to view full screenshot</span>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Sub-bar Social Proof */}
+            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-semibold text-[#717171] mt-8">
+              <div className="flex items-center gap-1.5 text-[#222222]">
+                <Star className="w-4 h-4 fill-[#FF385C] text-[#FF385C]" />
+                <span className="font-bold">4.98</span>
+                <span className="text-[#717171] font-normal">(Learning Retention)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
+                <span>SuperMemo-2 Spaced Repetition</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
+                <span>Zero Browsing Tracking</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#008A05]" />
+                <span>Free Unpacked Extension</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* 4. How It Works (Airbnb 4-Step Cards) */}
+      {/* 3. SHOWCASE SECTION: Real Extension Features & Cropped Parts */}
+      <section id="showcase-extension" className="py-20 bg-[#F7F7F7] border-y border-[#EBEBEB]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-bold text-[#FF385C] tracking-widest uppercase bg-[#FF385C]/10 px-3.5 py-1.5 rounded-full">
+              Chrome Extension Showcase
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mt-3 mb-3">
+              Capture knowledge without breaking concentration
+            </h2>
+            <p className="text-[#717171] max-w-xl mx-auto text-sm sm:text-base">
+              See the exact workflow: highlight any sentence on the web to trigger the floating button, then review active-recall prompts directly in the browser popup.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left: Two Cropped Highlight Parts */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Part 1: Highlight + Save Button */}
+              <div className="bg-white p-6 rounded-3xl border border-[#DDDDDD] shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF385C] bg-[#FF385C]/10 px-2.5 py-1 rounded-full">
+                    Part 1 • Text Selection
+                  </span>
+                  <span className="text-xs text-[#717171]">Any webpage</span>
+                </div>
+
+                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-4 shadow-inner bg-gray-50">
+                  <img
+                    src="/images/part-save-button.png"
+                    alt="Highlighted text with Save to Ormayundo floating button"
+                    className="w-full h-auto object-contain cursor-pointer hover:scale-105 transition-transform duration-300"
+                    onClick={() => setActiveModalImg('/images/part-save-button.png')}
+                  />
+                </div>
+
+                <h3 className="font-extrabold text-base text-[#222222] mb-1">
+                  1-Click "Save to Ormayundo" Floating Button
+                </h3>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Select text on Wikipedia, articles, or documentation. The distinctive red pill appears automatically right under your cursor. Click it to immediately synthesize an active-recall card.
+                </p>
+              </div>
+
+              {/* Part 2: Extension Popup & Question */}
+              <div className="bg-white p-6 rounded-3xl border border-[#DDDDDD] shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#008A05] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                    Part 2 • In-Tab Popup
+                  </span>
+                  <span className="text-xs font-semibold text-[#FF385C]">94 Due Today</span>
+                </div>
+
+                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-4 shadow-inner bg-gray-50 max-h-56 flex items-center justify-center">
+                  <img
+                    src="/images/part-extension-popup.png"
+                    alt="Extension popup with Active Recall question card"
+                    className="w-full h-auto object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                    onClick={() => setActiveModalImg('/images/part-extension-popup.png')}
+                  />
+                </div>
+
+                <h3 className="font-extrabold text-base text-[#222222] mb-1">
+                  Active Recall Flashcards Inside Any Tab
+                </h3>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  No need to open separate study software. The extension popup lets you flip cards, test comprehension with questions (like stored procedures or algorithms), and rate difficulty.
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Full Extension in Action */}
+            <div className="lg:col-span-7">
+              <div className="bg-white p-4 sm:p-6 rounded-3xl border border-[#DDDDDD] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#EBEBEB]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#008A05]" />
+                    <span className="text-xs font-bold text-[#222222]">Full Extension Context</span>
+                  </div>
+                  <span className="text-[11px] text-[#717171] font-mono">en.wikipedia.org/wiki/Steve_Jobs</span>
+                </div>
+
+                <div
+                  className="rounded-2xl overflow-hidden border border-[#EBEBEB] relative group cursor-pointer"
+                  onClick={() => setActiveModalImg('/images/extension-in-action.jpg')}
+                >
+                  <img
+                    src="/images/extension-in-action.jpg"
+                    alt="Full Wikipedia view with Ormayundo popup"
+                    className="w-full h-auto object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="bg-white text-[#222222] px-4 py-2 rounded-full font-bold text-xs shadow-lg flex items-center gap-1.5">
+                      <Maximize2 className="w-3.5 h-3.5" /> Click to enlarge
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#717171]">
+                  <span>💡 Notice the highlighted sentence and the open Active Recall flashcard on the right side.</span>
+                  <a
+                    href="/ormayundo-extension.zip"
+                    download="ormayundo-extension.zip"
+                    className="text-xs font-bold text-[#FF385C] hover:underline flex items-center gap-1 shrink-0"
+                  >
+                    Download Extension ZIP <ArrowRight className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. SHOWCASE SECTION: Real Brain Analytics Dashboard */}
+      <section id="showcase-dashboard" className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-bold text-[#FF385C] tracking-widest uppercase bg-[#FF385C]/10 px-3.5 py-1.5 rounded-full">
+              Web Dashboard Experience
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mt-3 mb-3">
+              Your Brain Dashboard & Memory Analytics
+            </h2>
+            <p className="text-[#717171] max-w-xl mx-auto text-sm sm:text-base">
+              Real analytics from real users. Track your retention rate, creation streaks, and upcoming review workload across days and weeks.
+            </p>
+          </div>
+
+          {/* Full Dashboard Screenshot in App Frame */}
+          <div className="bg-white rounded-3xl border border-[#DDDDDD] shadow-[0_16px_40px_rgba(0,0,0,0.08)] overflow-hidden mb-10">
+            {/* App Frame Bar */}
+            <div className="bg-[#F7F7F7] px-6 py-3.5 border-b border-[#EBEBEB] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+                <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+                <span className="ml-3 text-xs font-bold text-[#222222] hidden sm:inline">Ormayundo Analytics Hub</span>
+              </div>
+              <div className="bg-white border border-[#DDDDDD] rounded-full px-4 py-1 text-xs text-[#717171] font-mono shadow-xs truncate max-w-xs">
+                ormayundo-woad.vercel.app/app
+              </div>
+              <button
+                onClick={onGetStarted}
+                className="text-xs font-bold text-[#FF385C] hover:underline cursor-pointer"
+              >
+                Open Dashboard →
+              </button>
+            </div>
+
+            <div
+              className="relative group cursor-pointer"
+              onClick={() => setActiveModalImg('/images/dashboard-analytics.png')}
+            >
+              <img
+                src="/images/dashboard-analytics.png"
+                alt="Ormayundo Brain Analytics Dashboard"
+                className="w-full h-auto block object-cover"
+              />
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="bg-white text-[#222222] px-4 py-2 rounded-full font-bold text-xs shadow-lg flex items-center gap-1.5">
+                  <Maximize2 className="w-3.5 h-3.5" /> View full resolution analytics
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cropped Feature Highlights from the Analytics Image */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Highlight 1: Knowledge Mastery Donut */}
+            <div className="bg-[#F7F7F7] p-6 rounded-3xl border border-[#EBEBEB] flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#222222] bg-white px-2.5 py-1 rounded-full border border-[#DDDDDD] inline-block mb-3">
+                  Donut Breakdown
+                </span>
+                <div className="rounded-2xl overflow-hidden border border-[#EBEBEB] mb-4 bg-white p-2">
+                  <img
+                    src="/images/part-analytics-mastery.png"
+                    alt="Knowledge Mastery Donut Breakdown"
+                    className="w-full h-auto object-contain cursor-pointer"
+                    onClick={() => setActiveModalImg('/images/part-analytics-mastery.png')}
+                  />
+                </div>
+                <h4 className="font-extrabold text-[#222222] text-sm mb-1">Knowledge Mastery Donut</h4>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Real-time visual distribution dividing all your cards into: Learning (orange), Mastered (green), New (blue), and Relearning (red).
+                </p>
+              </div>
+            </div>
+
+            {/* Highlight 2: Upcoming Workload Forecast */}
+            <div className="bg-[#F7F7F7] p-6 rounded-3xl border border-[#EBEBEB] flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#222222] bg-white px-2.5 py-1 rounded-full border border-[#DDDDDD] inline-block mb-3">
+                  Spaced Workload
+                </span>
+                <div className="rounded-2xl overflow-hidden border border-[#EBEBEB] mb-4 bg-white p-2">
+                  <img
+                    src="/images/part-analytics-workload.png"
+                    alt="Upcoming Workload Spaced Repetition Chart"
+                    className="w-full h-auto object-contain cursor-pointer"
+                    onClick={() => setActiveModalImg('/images/part-analytics-workload.png')}
+                  />
+                </div>
+                <h4 className="font-extrabold text-[#222222] text-sm mb-1">Upcoming Workload Forecast</h4>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Bar chart showing review volume scheduled for Today, Tomorrow, in 3 Days, and Next Week based on SM-2 calculation.
+                </p>
+              </div>
+            </div>
+
+            {/* Highlight 3: Retention Rate & Streaks */}
+            <div className="bg-[#F7F7F7] p-6 rounded-3xl border border-[#EBEBEB] flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#222222] bg-white px-2.5 py-1 rounded-full border border-[#DDDDDD] inline-block mb-3">
+                  Retention Metrics
+                </span>
+                <div className="rounded-2xl overflow-hidden border border-[#EBEBEB] mb-4 bg-white p-2">
+                  <img
+                    src="/images/part-analytics-streak-retention.png"
+                    alt="Streak and Retention Rate 77%"
+                    className="w-full h-auto object-contain cursor-pointer"
+                    onClick={() => setActiveModalImg('/images/part-analytics-streak-retention.png')}
+                  />
+                </div>
+                <h4 className="font-extrabold text-[#222222] text-sm mb-1">77% Retention & Streak Tracker</h4>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Gauge your long-term memory score and stay consistent with daily study streaks and milestone confetti rewards.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. SHOWCASE SECTION: Real Flashcard Manager & Tables */}
+      <section id="showcase-manager" className="py-20 bg-[#F7F7F7] border-y border-[#EBEBEB]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-bold text-[#FF385C] tracking-widest uppercase bg-[#FF385C]/10 px-3.5 py-1.5 rounded-full">
+              Flashcard Knowledge Base
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mt-3 mb-3">
+              Multi-Deck Organization & Structured Tables
+            </h2>
+            <p className="text-[#717171] max-w-xl mx-auto text-sm sm:text-base">
+              Organize cards by technical subject. Tables, code syntax, and multi-field data are parsed cleanly without breaking.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left: Decks & Table Details */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Part: Decks Selector */}
+              <div className="bg-white p-6 rounded-3xl border border-[#DDDDDD] shadow-sm">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#222222] bg-[#F7F7F7] px-2.5 py-1 rounded-full border border-[#EBEBEB] inline-block mb-3">
+                  Automatic Tagging
+                </span>
+                <div className="rounded-2xl overflow-hidden border border-[#EBEBEB] mb-4 bg-gray-50">
+                  <img
+                    src="/images/part-manage-decks.png"
+                    alt="Subject deck filter pills"
+                    className="w-full h-auto object-contain cursor-pointer"
+                    onClick={() => setActiveModalImg('/images/part-manage-decks.png')}
+                  />
+                </div>
+                <h4 className="font-extrabold text-base text-[#222222] mb-1">
+                  Categorized Subject Decks
+                </h4>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Automatic AI tagging organizes cards into decks: <strong>Nodejs & express (11)</strong>, <strong>javascript (49)</strong>, <strong>noSql (6)</strong>, <strong>dsa (5)</strong>, <strong>sql</strong>, and <strong>wikipedia</strong>.
+                </p>
+              </div>
+
+              {/* Part: Rich Card with Table */}
+              <div className="bg-white p-6 rounded-3xl border border-[#DDDDDD] shadow-sm">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF385C] bg-[#FF385C]/10 px-2.5 py-1 rounded-full inline-block mb-3">
+                  Table & Markdown Support
+                </span>
+                <div className="rounded-2xl overflow-hidden border border-[#EBEBEB] mb-4 bg-gray-50">
+                  <img
+                    src="/images/part-manage-card-table.png"
+                    alt="MongoDB index type flashcard table"
+                    className="w-full h-auto object-contain cursor-pointer"
+                    onClick={() => setActiveModalImg('/images/part-manage-card-table.png')}
+                  />
+                </div>
+                <h4 className="font-extrabold text-base text-[#222222] mb-1">
+                  Preserves Tables, Code & Structure
+                </h4>
+                <p className="text-xs text-[#717171] leading-relaxed">
+                  Technical cards retain table comparisons (such as MongoDB Single Field, Compound, Multikey, and Text indexes) for crystal-clear revision.
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Full Manager Screenshot */}
+            <div className="lg:col-span-6">
+              <div className="bg-white p-4 sm:p-6 rounded-3xl border border-[#DDDDDD] shadow-[0_10px_30px_rgba(0,0,0,0.06)] sticky top-28">
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#EBEBEB]">
+                  <span className="text-xs font-bold text-[#222222]">Full Flashcard Manager</span>
+                  <span className="text-[11px] text-[#717171] font-mono">96 Total Flashcards</span>
+                </div>
+
+                <div
+                  className="rounded-2xl overflow-hidden border border-[#EBEBEB] relative group cursor-pointer"
+                  onClick={() => setActiveModalImg('/images/dashboard-manage-cards.png')}
+                >
+                  <img
+                    src="/images/dashboard-manage-cards.png"
+                    alt="Full Flashcard Manager Screenshot"
+                    className="w-full h-auto object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="bg-white text-[#222222] px-4 py-2 rounded-full font-bold text-xs shadow-lg flex items-center gap-1.5">
+                      <Maximize2 className="w-3.5 h-3.5" /> Enlarge full manager
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex items-center justify-between text-xs text-[#717171]">
+                  <span>Filter by deck, search by concept, or wipe all with 1 click.</span>
+                  <button
+                    onClick={onGetStarted}
+                    className="font-bold text-[#FF385C] hover:underline cursor-pointer"
+                  >
+                    Try it live →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. HOW IT WORKS (4 Step Airbnb Cards) */}
       <section id="how-it-works" className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-8">
           <div className="text-center mb-16">
             <span className="text-[11px] font-bold text-[#FF385C] tracking-widest uppercase bg-[#FF385C]/10 px-3.5 py-1.5 rounded-full">
-              Seamless Workflow
+              4-Step Workflow
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mt-3 mb-3">
               How to use Ormayundo
             </h2>
             <p className="text-[#717171] max-w-lg mx-auto text-sm sm:text-base">
-              Turn passive reading into permanent knowledge without breaking your concentration.
+              Turn passive reading into permanent memory in 4 simple steps.
             </p>
           </div>
 
@@ -455,7 +590,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
                 </span>
                 <h3 className="font-bold text-[#222222] text-lg mb-2">Highlight Anything</h3>
                 <p className="text-[#717171] text-xs sm:text-sm leading-relaxed">
-                  Read articles, documentation, or code. Simply highlight any core concept or takeaway.
+                  Read Wikipedia, technical docs, or articles. Highlight any core sentence or formula.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EBEBEB] text-xs font-bold text-[#FF385C] flex items-center gap-1">
@@ -470,7 +605,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
                 </span>
                 <h3 className="font-bold text-[#222222] text-lg mb-2">1-Click Save</h3>
                 <p className="text-[#717171] text-xs sm:text-sm leading-relaxed">
-                  Click "Save to Ormayundo". AI creates an active recall prompt and files it into the matching deck.
+                  Click the red "Save to Ormayundo" button. AI synthesizes an active recall card in the background.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EBEBEB] text-xs font-bold text-[#FF385C] flex items-center gap-1">
@@ -485,18 +620,18 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
                 </span>
                 <h3 className="font-bold text-[#222222] text-lg mb-2">Active Recall</h3>
                 <p className="text-[#717171] text-xs sm:text-sm leading-relaxed">
-                  Review due cards via the extension popup. Grade yourself to schedule optimal future spaced repetition.
+                  Review due cards via the extension popup or web dashboard using SM-2 spaced repetition intervals.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EBEBEB] text-xs font-bold text-[#FF385C] flex items-center gap-1">
-                Permanent memory retention <ArrowRight className="w-3.5 h-3.5" />
+                Permanent retention <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. Extension Download & Setup Box (Airbnb Luxe / Booking Card Style) */}
+      {/* 7. Extension Download Section (Airbnb Luxe / Booking Card Style) */}
       <section id="download" className="py-20 bg-[#F7F7F7] border-y border-[#EBEBEB]">
         <div className="max-w-4xl mx-auto px-4 sm:px-8">
           <div className="bg-white border border-[#DDDDDD] rounded-3xl p-8 sm:p-12 shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
@@ -511,7 +646,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
                   Download the Extension
                 </h2>
                 <p className="text-[#717171] text-sm leading-relaxed">
-                  Download the unpacked Chrome extension ZIP. Free, private, and compatible with all Chromium browsers.
+                  Download the unpacked Chrome extension ZIP. 100% free, private, and compatible with all Chromium browsers.
                 </p>
 
                 <div className="pt-2">
@@ -566,7 +701,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
         </div>
       </section>
 
-      {/* 6. Spaced Repetition Science (SuperMemo SM-2) */}
+      {/* 8. Spaced Repetition Science (SuperMemo SM-2) */}
       <section id="science" className="py-20 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-8">
           <div className="text-center mb-12">
@@ -609,15 +744,15 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
         </div>
       </section>
 
-      {/* 7. Key Features Grid */}
+      {/* 9. Key Features Grid */}
       <section id="features" className="py-20 bg-[#F7F7F7] border-t border-[#EBEBEB]">
         <div className="max-w-6xl mx-auto px-4 sm:px-8">
           <div className="text-center mb-16">
             <span className="text-[11px] font-bold text-[#FF385C] tracking-widest uppercase bg-[#FF385C]/10 px-3.5 py-1.5 rounded-full">
-              Full Feature Suite
+              Engineered for Mastery
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[#222222] tracking-tight mt-3 mb-3">
-              Engineered for permanent memory
+              Built for serious learners & developers
             </h2>
           </div>
 
@@ -638,7 +773,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
               </div>
               <h4 className="font-bold text-[#222222] text-base">Smart Deck Categorization</h4>
               <p className="text-[#717171] text-xs sm:text-sm leading-relaxed">
-                Automatically analyzes the text and source URL to organize flashcards into fitting subject decks like System Design or JavaScript.
+                Automatically organizes flashcards into fitting subject decks like Node.js, JavaScript, NoSQL, or DSA.
               </p>
             </div>
 
@@ -685,7 +820,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
         </div>
       </section>
 
-      {/* 8. Bottom CTA Banner (Airbnb Rausch Gradient) */}
+      {/* 10. Bottom CTA Banner (Airbnb Rausch Gradient) */}
       <section className="py-20 bg-gradient-to-r from-[#FF385C] via-[#E61E4D] to-[#D70466] text-white text-center relative overflow-hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-8 relative z-10 space-y-6">
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
@@ -716,7 +851,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
         </div>
       </section>
 
-      {/* 9. Footer (Airbnb Clean Footer) */}
+      {/* 11. Footer (Airbnb Clean Footer) */}
       <footer className="bg-white border-t border-[#EBEBEB] py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2.5">
@@ -734,6 +869,33 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
           </div>
         </div>
       </footer>
+
+      {/* 12. Modal Lightbox for Full-Resolution Image Inspection */}
+      {activeModalImg && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+          onClick={() => setActiveModalImg(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] bg-white rounded-3xl overflow-hidden p-2 shadow-2xl border border-white/20 cursor-default" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center px-4 py-2 border-b border-[#EBEBEB]">
+              <span className="text-xs font-bold text-[#717171]">Ormayundo High-Resolution Screenshot</span>
+              <button
+                onClick={() => setActiveModalImg(null)}
+                className="w-7 h-7 rounded-full bg-[#F7F7F7] hover:bg-gray-200 flex items-center justify-center text-[#222222] font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="overflow-auto max-h-[80vh] p-2">
+              <img
+                src={activeModalImg}
+                alt="Enlarged screenshot"
+                className="w-full h-auto rounded-xl object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
