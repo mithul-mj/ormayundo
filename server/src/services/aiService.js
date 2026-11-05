@@ -33,8 +33,25 @@ export const generateRecallQuestion = async (selectedText, userDecks = ['General
     clearTimeout(timeoutId);
     console.log('[AI] Received response from Groq!');
 
-    const responseContent = chatCompletion.choices[0]?.message?.content;
-    const parsed = JSON.parse(responseContent);
+    const rawContent = chatCompletion.choices[0]?.message?.content || '{}';
+    // Strip markdown code fences if present (e.g. ```json ... ```)
+    const sanitizedContent = rawContent
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(sanitizedContent);
+    } catch (parseErr) {
+      console.warn('[AI] JSON parse failed on output, attempting regex recovery:', parseErr.message);
+      const questionMatch = sanitizedContent.match(/"question"\s*:\s*"([^"]+)"/i);
+      const deckMatch = sanitizedContent.match(/"deck"\s*:\s*"([^"]+)"/i);
+      parsed = {
+        question: questionMatch ? questionMatch[1] : 'What is the key takeaway from this text?',
+        deck: deckMatch ? deckMatch[1] : 'General'
+      };
+    }
 
     return {
       question: parsed.question || 'What is the key takeaway from this text?',

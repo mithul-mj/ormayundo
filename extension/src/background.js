@@ -59,29 +59,10 @@ onBackgroundMessage(messaging, (payload) => {
   });
 });
 
-import { getToken } from "firebase/messaging";
-
-const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
-
 const syncFcmToken = async () => {
   try {
-    console.log("[background.js] Generating FCM Token...");
-
-    // In MV3 background scripts, self.registration is the service worker registration!
-    const fcmToken = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: self.registration
-    });
-
-    if (fcmToken) {
-      await fetchWithAuth(`${API_URL}/auth/fcm-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ token: fcmToken })
-      });
-      console.log("[background.js] FCM Token successfully generated and saved to backend!");
-    }
+    console.log("[background.js] FCM Token generation is temporarily disabled in the background script because the Firebase Messaging DOM library crashes MV3 Service Workers.");
+    // TODO: Implement FCM token generation using an Offscreen Document.
   } catch (e) {
     console.error("[background.js] Failed to generate/sync FCM Token", e);
   }

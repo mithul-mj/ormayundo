@@ -67,8 +67,11 @@ const recallItemSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Compound index for instant sub-millisecond URL lookup per user
+// Compound indexes for sub-millisecond lookups under high concurrency
 recallItemSchema.index({ userId: 1, status: 1, sourceUrl: 1 });
+recallItemSchema.index({ userId: 1, status: 1, nextReviewAt: 1, isGraduated: 1 }); // Instant /recall/due queries
+recallItemSchema.index({ userId: 1, status: 1, createdAt: -1 }); // Fast /recall list pagination
+recallItemSchema.index({ status: 1, nextReviewAt: 1, notificationSent: 1 }); // Fast push notification cron aggregation
 recallItemSchema.index({ userId: 1, deck: 1 });
 
 export default mongoose.model('RecallItem', recallItemSchema);

@@ -10,7 +10,7 @@ export const fcmTokenSchema = z.object({
 });
 
 export const createRecallSchema = z.object({
-  selectedText: z.string().min(1, 'Selected text is required'),
+  selectedText: z.string().min(1, 'Selected text is required').max(10000, 'Selected text cannot exceed 10,000 characters'),
   sourceUrl: z.string().url().optional().or(z.literal(''))
 });
 

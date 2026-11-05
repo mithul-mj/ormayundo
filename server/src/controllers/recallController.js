@@ -98,10 +98,10 @@ export const reviewRecallItem = async (req, res) => {
   }
 
   // 2. Calculate the next review date using SM-2 engine
-  const { 
-    nextReviewAt, 
-    newInterval, 
-    newRepetitions, 
+  const {
+    nextReviewAt,
+    newInterval,
+    newRepetitions,
     newEasinessFactor,
     newLearningStep,
     newIsGraduated

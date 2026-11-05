@@ -14,6 +14,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import api from '../api';
+import { calculateIntervalsForCard } from '../services/spacedRepetition';
 
 const Dashboard = () => {
   const [dueCards, setDueCards] = useState([]);
@@ -64,35 +65,14 @@ const Dashboard = () => {
   const getNextIntervalText = (ratingStr) => {
     if (!dueCards[currentCardIndex]) return '';
     const card = dueCards[currentCardIndex];
-
-    const ratingMap = { forgot: 1, hard: 3, good: 4, easy: 5 };
-    const grade = ratingMap[ratingStr] || 1;
-
-    let interval = card.interval || 0;
-    let repetitions = card.correctCount || 0;
-    let easinessFactor = card.easinessFactor || 2.5;
-    let learningStep = card.learningStep || 0;
-    let isGraduated = card.isGraduated || false;
-
-    if (!isGraduated) {
-      if (ratingStr === 'forgot') return '<1m';
-      if (ratingStr === 'hard') return '5m';
-      if (ratingStr === 'good') {
-        if (learningStep === 0) return '10m';
-        return '1d';
-      }
-      if (ratingStr === 'easy') return '4d';
-    } else {
-      if (grade >= 3) {
-        if (repetitions === 0) interval = 1;
-        else if (repetitions === 1) interval = 6;
-        else interval = Math.round(interval * easinessFactor);
-        return interval === 1 ? '1d' : `${interval}d`;
-      } else {
-        return '<1m';
-      }
-    }
-    return '1d';
+    const intervals = calculateIntervalsForCard(
+      card.interval,
+      card.correctCount,
+      card.easinessFactor,
+      card.learningStep,
+      card.isGraduated
+    );
+    return intervals[ratingStr]?.text || '';
   };
 
   const showToast = (message) => {

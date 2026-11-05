@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from './config';
 
-export default function Auth({ onLoginSuccess }) {
+export default function Auth({ onLoginSuccess, onBack }) {
   const [error, setError] = useState('');
 
   const handleSuccess = async (credentialResponse) => {
@@ -48,8 +49,18 @@ export default function Auth({ onLoginSuccess }) {
         </div>
 
         {/* Right Side: Login Panel */}
-        <div className="md:w-[480px] bg-white flex flex-col justify-center items-center p-8 md:p-12">
+        <div className="md:w-[480px] bg-white flex flex-col justify-center items-center p-8 md:p-12 relative">
           
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="absolute top-6 left-6 inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Home</span>
+            </button>
+          )}
+
           <div className="w-full max-w-sm">
             <div className="mb-10 text-center">
               <div className="w-14 h-14 bg-[#FF5A5F]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">

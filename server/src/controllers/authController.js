@@ -72,6 +72,18 @@ export const logoutUser = async (req, res) => {
   res.status(STATUS_CODES.OK).json({ message: 'Logged out successfully' });
 };
 
+// @desc    Get currently logged in user profile (lightweight auth verification)
+// @route   GET /api/auth/me
+// @access  Private
+export const getMe = async (req, res) => {
+  res.status(STATUS_CODES.OK).json({
+    _id: req.user._id,
+    email: req.user.email,
+    currentStreak: req.user.currentStreak || 0,
+    maxStreak: req.user.maxStreak || 0
+  });
+};
+
 // @desc    Save FCM Token
 // @route   POST /api/auth/fcm-token
 export const saveFcmToken = async (req, res) => {

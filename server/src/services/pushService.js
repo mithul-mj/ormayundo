@@ -47,56 +47,77 @@ export const sendPushNotification = async (fcmToken, title, body) => {
   }
 };
 
-// Start the cron job to run every minute for testing
+// Mutex lock to prevent overlapping runs
+let isCronRunning = false;
+
+// Start the cron job to run every minute
 export const startCronJobs = () => {
-  console.log("Started Push Notification Cron Job (Runs every minute for testing)");
+  console.log("Started Push Notification Cron Job");
 
   cron.schedule('* * * * *', async () => {
+    if (isCronRunning) {
+      console.log("[Cron] Previous push notification cycle still active, skipping to prevent overlap.");
+      return;
+    }
+    isCronRunning = true;
+
     try {
-      // BEST PRACTICE: Only fetch cards that are due AND haven't been notified yet!
+      // Fetch cards that are due and haven't been notified yet
       const dueByUser = await RecallItem.aggregate([
-        { $match: { 
+        { 
+          $match: { 
             status: 'active', 
             nextReviewAt: { $lte: new Date() },
-            notificationSent: { $ne: true } // Handles both false and undefined (legacy data)
-        }},
+            notificationSent: { $ne: true }
+          }
+        },
         { $group: { _id: '$userId', count: { $sum: 1 } } }
       ]);
 
-      if (dueByUser.length === 0) return; // No new due cards
+      if (dueByUser.length === 0) return;
 
-      // Fetch the FCM tokens for these specific users
+      // Fetch FCM tokens for these specific users
       const userIds = dueByUser.map(item => item._id);
-      const users = await User.find({ _id: { $in: userIds }, fcmToken: { $exists: true, $ne: null } });
+      const users = await User.find({ _id: { $in: userIds }, fcmToken: { $exists: true, $ne: null } }).lean();
 
-      // Create a map of userId -> fcmToken for fast lookup
-      const tokenMap = {};
+      const tokenMap = new Map();
       users.forEach(user => {
-        tokenMap[user._id.toString()] = user.fcmToken;
+        tokenMap.set(user._id.toString(), user.fcmToken);
       });
 
-      // Fire notifications and flip the flag
-      for (const group of dueByUser) {
-        const token = tokenMap[group._id.toString()];
-        if (token) {
-          await sendPushNotification(token, 'Time for Ormayundo!', `You have ${group.count} flashcards due for active recall.`);
-          
-          // CRITICAL: Flip the flag so we don't spam the user again!
-          await RecallItem.updateMany(
-            { 
-              userId: group._id, 
-              status: 'active', 
-              nextReviewAt: { $lte: new Date() },
-              notificationSent: { $ne: true }
-            },
-            { $set: { notificationSent: true } }
-          );
-        } else {
-          console.log(`[Cron] Found ${group.count} flashcards due for user ${group._id}, but they have NO FCM TOKEN saved in the database! Notification skipped.`);
-        }
+      const notifiedUserIds = [];
+
+      // Process push notifications in parallel chunks of 10 to handle high concurrency
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < dueByUser.length; i += BATCH_SIZE) {
+        const batch = dueByUser.slice(i, i + BATCH_SIZE);
+        await Promise.allSettled(
+          batch.map(async (group) => {
+            const token = tokenMap.get(group._id.toString());
+            if (token) {
+              await sendPushNotification(token, 'Time for Ormayundo!', `You have ${group.count} flashcards due for active recall.`);
+              notifiedUserIds.push(group._id);
+            }
+          })
+        );
+      }
+
+      // Bulk update all notified cards in a single database query
+      if (notifiedUserIds.length > 0) {
+        await RecallItem.updateMany(
+          { 
+            userId: { $in: notifiedUserIds }, 
+            status: 'active', 
+            nextReviewAt: { $lte: new Date() },
+            notificationSent: { $ne: true }
+          },
+          { $set: { notificationSent: true } }
+        );
       }
     } catch (error) {
       console.error('Cron Job Error:', error);
+    } finally {
+      isCronRunning = false;
     }
   });
 };
