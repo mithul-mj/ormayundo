@@ -352,7 +352,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
                 <span className="ml-3 text-xs font-bold text-ink hidden sm:inline">Ormayundo Analytics Hub</span>
               </div>
               <div className="bg-white border border-border-card rounded-full px-4 py-1 text-xs text-muted font-mono shadow-xs truncate max-w-xs">
-                ormayundo-woad.vercel.app/app
+                ormayundo-app.vercel.app/app
               </div>
               <button
                 onClick={onGetStarted}

@@ -249,7 +249,7 @@ async function sendHighlights(tabId, url) {
   if (!url || !url.startsWith('http')) return;
 
   // Ignore our own web app dashboard URLs so the extension doesn't highlight card text inside the dashboard manager!
-  if (url.includes('ormayundo-woad.vercel.app') || url.includes('localhost:5173') || url.includes('localhost:3000')) return;
+  if (url.includes('ormayundo-app.vercel.app') || url.includes('localhost:5173') || url.includes('localhost:3000')) return;
 
   try {
     const response = await fetchWithAuth(`${API_URL}/recall?url=${encodeURIComponent(url)}`, {

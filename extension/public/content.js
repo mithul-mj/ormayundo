@@ -1,5 +1,5 @@
 // Guard: prevent double-injection (manifest + scripting.executeScript both run this file)
-if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-woad.vercel.app') || window.location.hostname.includes('localhost')) {
+if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app.vercel.app') || window.location.hostname.includes('localhost')) {
   // Already running or on Ormayundo Web App Dashboard — do nothing
 } else {
   window.__ormayundoLoaded = true;

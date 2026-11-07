@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://ormayundo-woad.vercel.app/sitemap.xml
+Sitemap: https://ormayundo-app.vercel.app/sitemap.xml
