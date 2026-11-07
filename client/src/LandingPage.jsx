@@ -85,19 +85,10 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
         </div>
       </header>
 
-      {/* 2. Hero Section (Airbnb Editorial Style) */}
+      <main>
+        {/* 2. Hero Section (Airbnb Editorial Style) */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-24 overflow-hidden bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 text-center">
-          {/* Editorial Eyebrow */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-xs sm:text-sm font-medium text-muted mb-5 tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-brand animate-pulse inline-block" />
-            <span className="text-ink font-bold">Active Recall</span>
-            <span className="text-border-card">•</span>
-            <span>SuperMemo SM-2 Engine</span>
-            <span className="text-border-card">•</span>
-            <span className="text-success font-semibold">100% Free Unpacked Extension</span>
-          </div>
-
           {/* Headline */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] mb-6">
             Remember everything <br className="hidden sm:inline" />
@@ -110,7 +101,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
           </p>
 
           {/* Airbnb Iconic Action Pill Bar */}
-          <div className="max-w-3xl mx-auto mb-14 p-2 sm:p-2.5 bg-white border border-border-card rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+          <div className="max-w-3xl mx-auto mb-5 p-2 sm:p-2.5 bg-white border border-border-card rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
             <div className="flex-1 px-4 sm:px-6 py-1.5 sm:border-r border-divider w-full sm:w-auto">
               <span className="block text-[11px] font-bold text-ink uppercase tracking-wider">Highlight</span>
               <span className="text-xs text-muted font-medium truncate block">Select text on Wikipedia, MDN, blogs</span>
@@ -133,6 +124,16 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
               <Download className="w-4 h-4" />
               <span>Get Extension (.ZIP)</span>
             </a>
+          </div>
+
+          {/* Reassurance Trust Strip */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-[11px] sm:text-xs font-normal text-muted mb-12 tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse inline-block" />
+            <span className="text-ink font-medium">Active Recall</span>
+            <span className="text-border-card text-[10px]">•</span>
+            <span>SuperMemo SM-2 Engine</span>
+            <span className="text-border-card text-[10px]">•</span>
+            <span className="text-success font-medium">100% Free Unpacked Extension</span>
           </div>
 
           {/* Real In-Action Hero Screenshot */}
@@ -844,6 +845,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
           </div>
         </div>
       </section>
+      </main>
 
       {/* 11. Footer (Airbnb Clean Footer) */}
       <footer className="bg-white border-t border-divider py-12">

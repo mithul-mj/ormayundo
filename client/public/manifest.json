@@ -1,0 +1,18 @@
+{
+  "name": "Ormayundo Active Recall",
+  "short_name": "Ormayundo",
+  "description": "Remember everything you read on the web with active recall and spaced repetition.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF385C",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
