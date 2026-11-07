@@ -57,8 +57,37 @@ const Dashboard = ({ onLogout }) => {
   }, [onLogout]);
 
   useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+    let ignore = false;
+    async function loadData() {
+      try {
+        const [cardsRes, decksRes] = await Promise.all([
+          api.get('/recall/due'),
+          api.get('/decks')
+        ]);
+        if (!ignore) {
+          setDueCards(cardsRes.data);
+          setDecks(decksRes.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch due cards:', error);
+        if (!ignore) {
+          if (error.isAuthError || error.response?.status === 401) {
+            onLogout?.();
+          } else {
+            setFetchError(MESSAGES.ERROR.FETCH_FAILED);
+          }
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    loadData();
+    return () => {
+      ignore = true;
+    };
+  }, [onLogout]);
 
   const getDeckColor = (deckName) => {
     const found = decks.find(d => d.name.toLowerCase() === (deckName || 'general').toLowerCase());
@@ -219,7 +248,7 @@ const Dashboard = ({ onLogout }) => {
         <p className="text-gray-500 mt-1 text-xs mb-4">{fetchError}</p>
         <button
           onClick={fetchCards}
-          className="px-4 py-2 bg-[#FF385C] text-white text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+          className="px-4 py-2 bg-brand text-white text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
         >
           Try Again
         </button>
@@ -244,8 +273,8 @@ const Dashboard = ({ onLogout }) => {
     <div className="relative p-6 flex flex-col items-center h-full w-full overflow-hidden">
       {/* Toast Notification (Airbnb Black Pill) */}
       {toastMessage && (
-        <div className="absolute top-4 z-50 bg-[#222222] text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl flex items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-          <Check className="w-3.5 h-3.5 text-[#008A05]" />
+        <div className="absolute top-4 z-50 bg-ink text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl flex items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+          <Check className="w-3.5 h-3.5 text-success" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -263,12 +292,12 @@ const Dashboard = ({ onLogout }) => {
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <button
                 onClick={handleCloseEdit}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-[#222222] transition-colors cursor-pointer -ml-1"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-ink transition-colors cursor-pointer -ml-1"
                 title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
-              <h3 className="text-sm font-bold text-[#222222] tracking-tight">Edit Question</h3>
+              <h3 className="text-sm font-bold text-ink tracking-tight">Edit Question</h3>
               <div className="w-8" />
             </div>
 
@@ -282,9 +311,9 @@ const Dashboard = ({ onLogout }) => {
 
             {/* Question Input */}
             <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center text-xs font-semibold text-[#222222]">
+              <div className="flex justify-between items-center text-xs font-semibold text-ink">
                 <span>Question Prompt</span>
-                <span className="text-[11px] text-[#717171] font-normal">{editQuestion.length} characters</span>
+                <span className="text-[11px] text-muted font-normal">{editQuestion.length} characters</span>
               </div>
               <textarea
                 autoFocus
@@ -298,24 +327,24 @@ const Dashboard = ({ onLogout }) => {
                 }}
                 placeholder="What question will help you recall this?"
                 rows={3}
-                className="w-full p-3.5 border border-gray-200 rounded-2xl text-sm font-medium text-[#222222] placeholder:text-gray-400 focus:outline-none focus:border-[#222222] focus:ring-1 focus:ring-[#222222] resize-none transition-all"
+                className="w-full p-3.5 border border-gray-200 rounded-2xl text-sm font-medium text-ink placeholder:text-gray-400 focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink resize-none transition-all"
               />
             </div>
 
             {/* Read-Only Answer Reference */}
             {currentCard?.selectedText && (
-              <div className="bg-[#F7F7F7] border border-gray-100 rounded-2xl p-3.5 flex flex-col gap-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#717171]">Source Material</span>
+              <div className="bg-surface border border-gray-100 rounded-2xl p-3.5 flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Source Material</span>
                 <div className="max-h-24 overflow-y-auto custom-scrollbar pr-1">
-                  <p className="text-xs text-[#717171] italic leading-relaxed whitespace-pre-wrap">
+                  <p className="text-xs text-muted italic leading-relaxed whitespace-pre-wrap">
                     {currentCard.selectedText}
                   </p>
                 </div>
               </div>
             )}
 
-            <p className="text-[11px] text-[#717171] text-center my-0.5">
-              Press <span className="font-semibold text-[#222222]">Enter</span> to save · <span className="font-semibold text-[#222222]">Shift + Enter</span> for new line
+            <p className="text-[11px] text-muted text-center my-0.5">
+              Press <span className="font-semibold text-ink">Enter</span> to save · <span className="font-semibold text-ink">Shift + Enter</span> for new line
             </p>
 
             {/* Modal Footer Buttons */}
@@ -324,7 +353,7 @@ const Dashboard = ({ onLogout }) => {
                 type="button"
                 onClick={handleCloseEdit}
                 disabled={isSaving}
-                className="text-xs font-bold text-[#222222] underline hover:text-black py-2 px-1 transition-colors disabled:opacity-50 cursor-pointer"
+                className="text-xs font-bold text-ink underline hover:text-black py-2 px-1 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -332,7 +361,7 @@ const Dashboard = ({ onLogout }) => {
                 type="button"
                 onClick={handleSaveEdit}
                 disabled={isSaving || !editQuestion.trim()}
-                className="bg-gradient-to-r from-[#FF385C] to-[#E61E4D] hover:opacity-95 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                className="bg-gradient-to-r from-brand to-brand-hover hover:opacity-95 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 {isSaving ? (
                   <>
@@ -489,11 +518,9 @@ const Dashboard = ({ onLogout }) => {
         </div>
 
         <div
-          className="absolute inset-0 w-full h-full rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center p-6 text-center transition-all duration-500"
+          className="absolute inset-0 w-full h-full rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center p-6 text-center transition-all duration-500 bg-brand text-white"
           style={{
             backfaceVisibility: 'hidden',
-            backgroundColor: '#FF5A5F',
-            color: 'white',
             transform: isFlipped ? 'rotateY(0deg)' : 'rotateY(-180deg)'
           }}
         >

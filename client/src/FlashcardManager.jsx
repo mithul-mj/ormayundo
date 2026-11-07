@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, Save, Search, RefreshCw, ChevronLeft, ChevronRight, Bomb, FolderPlus, Tag } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import { API_URL } from './config';
+import { themeColors } from './theme';
 
 const FlashcardManager = () => {
   const [cards, setCards] = useState([]);
@@ -25,33 +26,32 @@ const FlashcardManager = () => {
 
   // Reset to first page when searching or changing deck
   useEffect(() => {
-    setCurrentPage(1);
+    const timer = setTimeout(() => setCurrentPage(1), 0);
+    return () => clearTimeout(timer);
   }, [searchQuery, selectedDeck]);
 
-  const fetchDecks = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/decks`, { withCredentials: true });
-      setDecks(res.data);
-    } catch (error) {
-      console.error('Failed to fetch decks', error);
-    }
-  };
-
-  const fetchCards = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_URL}/recall`, { withCredentials: true });
-      setCards(res.data);
-    } catch (error) {
-      console.error('Failed to fetch cards', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchDecks();
-    fetchCards();
+    let ignore = false;
+    async function startFetching() {
+      try {
+        const [decksRes, cardsRes] = await Promise.all([
+          axios.get(`${API_URL}/decks`, { withCredentials: true }),
+          axios.get(`${API_URL}/recall`, { withCredentials: true })
+        ]);
+        if (!ignore) {
+          setDecks(decksRes.data);
+          setCards(cardsRes.data);
+        }
+      } catch (error) {
+        console.error('Failed to load initial data', error);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    startFetching();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleCreateDeck = async (e) => {
@@ -87,7 +87,7 @@ const FlashcardManager = () => {
       text: "You won't be able to revert this!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#FF5A5F',
+      confirmButtonColor: themeColors.brand,
       cancelButtonColor: '#9CA3AF',
       confirmButtonText: 'Yes, delete it!',
       customClass: {
@@ -106,7 +106,7 @@ const FlashcardManager = () => {
         title: 'Deleted!',
         text: 'Your flashcard has been deleted.',
         icon: 'success',
-        confirmButtonColor: '#FF5A5F',
+        confirmButtonColor: themeColors.brand,
         customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
       });
     } catch (error) {
@@ -115,7 +115,7 @@ const FlashcardManager = () => {
         title: 'Error!',
         text: 'Failed to delete flashcard.',
         icon: 'error',
-        confirmButtonColor: '#FF5A5F',
+        confirmButtonColor: themeColors.brand,
         customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
       });
     }
@@ -127,7 +127,7 @@ const FlashcardManager = () => {
       text: "Are you sure you want to delete EVERY flashcard? This cannot be undone!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#FF5A5F',
+      confirmButtonColor: themeColors.brand,
       cancelButtonColor: '#9CA3AF',
       confirmButtonText: 'Yes, wipe them all!',
       customClass: {
@@ -146,7 +146,7 @@ const FlashcardManager = () => {
         title: 'Wiped!',
         text: 'All your flashcards have been deleted.',
         icon: 'success',
-        confirmButtonColor: '#FF5A5F',
+        confirmButtonColor: themeColors.brand,
         customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
       });
     } catch (error) {
@@ -155,7 +155,7 @@ const FlashcardManager = () => {
         title: 'Error!',
         text: 'Failed to delete all flashcards.',
         icon: 'error',
-        confirmButtonColor: '#FF5A5F',
+        confirmButtonColor: themeColors.brand,
         customClass: { popup: 'rounded-3xl', confirmButton: 'rounded-xl font-bold px-6 py-2' }
       });
     }
@@ -169,7 +169,7 @@ const FlashcardManager = () => {
       text: "Cards in this deck will be moved to 'General'.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#FF5A5F',
+      confirmButtonColor: themeColors.brand,
       cancelButtonColor: '#9CA3AF',
       confirmButtonText: 'Yes, delete deck',
       customClass: {
@@ -250,7 +250,7 @@ const FlashcardManager = () => {
             <input
               type="text"
               placeholder="Search cards..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-light"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -308,7 +308,7 @@ const FlashcardManager = () => {
 
         <button
           onClick={() => setShowDeckInput(true)}
-          className="px-3 py-1.5 border border-dashed border-gray-300 hover:border-[#FF5A5F] hover:text-[#FF5A5F] text-gray-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+          className="px-3 py-1.5 border border-dashed border-gray-300 hover:border-brand-light hover:text-brand-light text-gray-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
         >
           <FolderPlus className="w-3.5 h-3.5" /> New Deck
         </button>
@@ -327,8 +327,8 @@ const FlashcardManager = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#FF5A5F]/10">
-                    <FolderPlus className="w-4 h-4 text-[#FF5A5F]" />
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-light/10">
+                    <FolderPlus className="w-4 h-4 text-brand-light" />
                   </div>
                   <h2 className="text-sm font-bold text-gray-800">Create New Deck</h2>
                 </div>
@@ -350,7 +350,7 @@ const FlashcardManager = () => {
                     onChange={e => setNewDeckName(e.target.value)}
                     onKeyDown={e => e.key === 'Escape' && (setShowDeckInput(false), setNewDeckName(''))}
                     autoFocus
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/30 focus:border-[#FF5A5F] transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-light/30 focus:border-brand-light transition-all"
                   />
                   {newDeckName.length > 0 && newDeckName.trim().length < 3 && (
                     <p className="text-[11px] text-amber-500 font-semibold mt-1.5 ml-1">
@@ -386,7 +386,7 @@ const FlashcardManager = () => {
                   <button
                     type="submit"
                     disabled={newDeckName.trim().length < 3}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#FF5A5F] hover:bg-[#FF385C] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-light hover:bg-brand transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Create Deck
                   </button>
@@ -468,7 +468,7 @@ const FlashcardManager = () => {
                       type="text"
                       value={editForm.question}
                       onChange={e => setEditForm({ ...editForm, question: e.target.value })}
-                      className="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-inner focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] focus:outline-none transition-all"
+                      className="w-full p-3 border border-gray-200 rounded-xl text-lg font-bold shadow-inner focus:ring-2 focus:ring-brand-light/20 focus:border-brand-light focus:outline-none transition-all"
                     />
                   ) : (
                     <p className="text-xl font-bold text-gray-900 leading-tight">{card.question}</p>
@@ -483,16 +483,16 @@ const FlashcardManager = () => {
                       value={editForm.selectedText}
                       onChange={e => setEditForm({ ...editForm, selectedText: e.target.value })}
                       rows={6}
-                      className="w-full p-4 border border-gray-200 rounded-xl font-mono text-sm text-gray-700 bg-gray-50/50 shadow-inner focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] focus:outline-none transition-all"
+                      className="w-full p-4 border border-gray-200 rounded-xl font-mono text-sm text-gray-700 bg-gray-50/50 shadow-inner focus:ring-2 focus:ring-brand-light/20 focus:border-brand-light focus:outline-none transition-all"
                     />
                   ) : (
                     <div className="p-5 bg-gray-50/50 border border-gray-100 rounded-2xl shadow-sm max-h-72 overflow-y-auto custom-scrollbar">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          table: ({ node, ...props }) => <table className="markdown-table" {...props} />,
-                          a: ({ node, ...props }) => <a className="text-[#FF5A5F] font-medium hover:underline hover:text-[#FF385C] transition-colors" {...props} />,
-                          p: ({ node, ...props }) => <p className="text-gray-700 leading-relaxed mb-4 last:mb-0" {...props} />
+                          table: ({ ...props }) => <table className="markdown-table" {...props} />,
+                          a: ({ ...props }) => <a className="text-brand-light font-medium hover:underline hover:text-brand transition-colors" {...props} />,
+                          p: ({ ...props }) => <p className="text-gray-700 leading-relaxed mb-4 last:mb-0" {...props} />
                         }}
                       >
                         {card.selectedText}
@@ -505,7 +505,7 @@ const FlashcardManager = () => {
                 <div className="flex gap-4 text-xs text-gray-400 font-medium">
                   <span>Reviews: {card.reviewCount}</span>
                   <span>Next Review: {new Date(card.nextReviewAt).toLocaleDateString()}</span>
-                  {card.sourceUrl && <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="text-[#FF5A5F] hover:underline">Source Link</a>}
+                  {card.sourceUrl && <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="text-brand-light hover:underline">Source Link</a>}
                 </div>
               </div>
 
@@ -532,7 +532,7 @@ const FlashcardManager = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className={`flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 bg-white shadow-sm border border-gray-100 hover:shadow-md hover:text-[#FF5A5F] hover:-translate-x-0.5'}`}
+                className={`flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 bg-white shadow-sm border border-gray-100 hover:shadow-md hover:text-brand-light hover:-translate-x-0.5'}`}
               >
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
@@ -548,7 +548,7 @@ const FlashcardManager = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className={`flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 bg-white shadow-sm border border-gray-100 hover:shadow-md hover:text-[#FF5A5F] hover:translate-x-0.5'}`}
+                className={`flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 bg-white shadow-sm border border-gray-100 hover:shadow-md hover:text-brand-light hover:translate-x-0.5'}`}
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>

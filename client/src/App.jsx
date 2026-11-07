@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LayoutDashboard, Library, Loader2, Brain } from 'lucide-react';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import FlashcardManager from './FlashcardManager';
@@ -13,7 +13,7 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'manage'
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => window.location.pathname !== '/privacy');
 
   // Client-side navigation helper with browser history support
   const navigate = (path) => {
@@ -36,7 +36,7 @@ export default function App() {
       try {
         await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
         setIsAuthenticated(true);
-      } catch (error) {
+      } catch {
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -45,8 +45,6 @@ export default function App() {
 
     if (window.location.pathname !== '/privacy') {
       checkAuth();
-    } else {
-      setLoading(false);
     }
   }, []);
 
@@ -61,7 +59,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#FF385C] w-8 h-8" />
+        <Loader2 className="animate-spin text-brand w-8 h-8" />
       </div>
     );
   }
@@ -101,19 +99,19 @@ export default function App() {
     }
 
     return (
-      <div className="min-h-screen bg-[#FAFAFA] text-[#222222] flex flex-col font-sans">
+      <div className="min-h-screen bg-gray-50 text-ink flex flex-col font-sans">
         {/* App Dashboard Navbar: Clean Airbnb styling, NO download button */}
-        <nav className="bg-white sticky top-0 z-50 border-b border-[#EBEBEB]">
+        <nav className="bg-white sticky top-0 z-50 border-b border-divider">
           <div className="max-w-6xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between gap-4">
             <div
               className="flex items-center gap-2.5 cursor-pointer group"
               onClick={() => navigate('/')}
               title="Return to Landing Page"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF385C] to-[#E61E4D] flex items-center justify-center text-white shadow-sm shadow-[#FF385C]/20 group-hover:scale-105 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center text-white shadow-sm shadow-brand/20 group-hover:scale-105 transition-transform">
                 <Brain className="w-5 h-5" />
               </div>
-              <span className="font-extrabold text-2xl tracking-tighter text-[#FF385C]">
+              <span className="font-extrabold text-2xl tracking-tighter text-brand">
                 Ormayundo.
               </span>
             </div>
@@ -123,8 +121,8 @@ export default function App() {
                 onClick={() => setActiveTab('dashboard')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer ${
                   activeTab === 'dashboard'
-                    ? 'bg-[#222222] text-white shadow-sm'
-                    : 'text-[#717171] hover:text-[#222222] hover:bg-[#F7F7F7]'
+                    ? 'bg-ink text-white shadow-sm'
+                    : 'text-muted hover:text-ink hover:bg-surface'
                 }`}
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
@@ -135,15 +133,15 @@ export default function App() {
                 onClick={() => setActiveTab('manage')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer ${
                   activeTab === 'manage'
-                    ? 'bg-[#222222] text-white shadow-sm'
-                    : 'text-[#717171] hover:text-[#222222] hover:bg-[#F7F7F7]'
+                    ? 'bg-ink text-white shadow-sm'
+                    : 'text-muted hover:text-ink hover:bg-surface'
                 }`}
               >
                 <Library className="w-3.5 h-3.5" />
                 <span>Manage Cards</span>
               </button>
 
-              <div className="w-px h-6 bg-[#EBEBEB] mx-2" />
+              <div className="w-px h-6 bg-divider mx-2" />
 
               <button
                 onClick={async () => {
@@ -151,7 +149,7 @@ export default function App() {
                   setIsAuthenticated(false);
                   navigate('/');
                 }}
-                className="text-xs font-bold text-[#717171] hover:text-[#FF385C] transition-colors px-2 cursor-pointer"
+                className="text-xs font-bold text-muted hover:text-brand transition-colors px-2 cursor-pointer"
               >
                 Logout
               </button>

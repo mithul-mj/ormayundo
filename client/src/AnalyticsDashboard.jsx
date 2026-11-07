@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Brain, Calendar, Target, Globe, Activity, Loader2, Flame, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Brain, Calendar, Globe, Activity, Loader2, Flame, Clock } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { API_URL } from './config';
+import { themeColors } from './theme';
 import Confetti from 'react-confetti';
 
 const AnalyticsDashboard = () => {
@@ -23,19 +24,23 @@ const AnalyticsDashboard = () => {
 
   useEffect(() => {
     let timeoutId;
+    let confettiTimer;
     if (data && data.additionStreak > 0) {
       const milestones = [3, 7, 14, 30, 50, 100, 365];
       if (milestones.includes(data.additionStreak)) {
         const lastConfetti = localStorage.getItem('lastConfettiDate');
         const today = new Date().toISOString().split('T')[0];
         if (lastConfetti !== today) {
-          setShowConfetti(true);
-          localStorage.setItem('lastConfettiDate', today);
-          timeoutId = setTimeout(() => setShowConfetti(false), 8000); // Stop after 8s
+          confettiTimer = setTimeout(() => {
+            setShowConfetti(true);
+            localStorage.setItem('lastConfettiDate', today);
+            timeoutId = setTimeout(() => setShowConfetti(false), 8000); // Stop after 8s
+          }, 0);
         }
       }
     }
     return () => {
+      if (confettiTimer) clearTimeout(confettiTimer);
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [data]);
@@ -58,7 +63,7 @@ const AnalyticsDashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-[#FF5A5F]" />
+        <Loader2 className="w-12 h-12 animate-spin text-brand-light" />
       </div>
     );
   }
@@ -75,7 +80,7 @@ const AnalyticsDashboard = () => {
             recycle={false}
             numberOfPieces={600}
             gravity={0.12}
-            colors={['#FF5A5F', '#FF385C', '#ff8a8f', '#ffffff']}
+            colors={[themeColors.brandLight, themeColors.brand, '#ff8a8f', '#ffffff']}
           />
         </div>
       )}
@@ -91,23 +96,21 @@ const AnalyticsDashboard = () => {
 
             {/* Streak Card */}
             <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-[#FF5A5F]/15 to-transparent rounded-full blur-2xl"></div>
-              <div className="relative z-10 text-[#FF5A5F]">
-                <Flame className="w-8 h-8 fill-[#FF5A5F]/20 drop-shadow-sm" />
+              <div className="text-brand-light">
+                <Flame className="w-8 h-8 fill-brand-light/20" />
               </div>
-              <div className="relative z-10">
+              <div>
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Creation Streak</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-800 to-gray-600 tracking-tighter">{data.additionStreak || 0}</p>
-                  <span className="text-xs font-bold text-[#FF5A5F] bg-[#FF5A5F]/10 border border-[#FF5A5F]/20 px-2 py-0.5 rounded-full shadow-sm">Max {data.maxStreak || 0}</span>
+                  <p className="text-3xl font-black text-gray-900 tracking-tighter">{data.additionStreak || 0}</p>
+                  <span className="text-xs font-bold text-brand-light bg-brand-light/10 border border-brand-light/20 px-2 py-0.5 rounded-full shadow-sm">Max {data.maxStreak || 0}</span>
                 </div>
               </div>
             </div>
 
             {/* Retention Card (Large Typography + Circular Ring) */}
             <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-[#10b981]/10 to-transparent rounded-full blur-2xl"></div>
-              <div className="relative flex items-center justify-center z-10">
+              <div className="flex items-center justify-center">
                 <svg width="48" height="48" viewBox="0 0 48 48" className="transform -rotate-90 drop-shadow-sm">
                   <circle cx="24" cy="24" r="20" stroke="#f3f4f6" strokeWidth="6" fill="transparent" />
                   <circle
@@ -144,7 +147,7 @@ const AnalyticsDashboard = () => {
 
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-6">
-              <Brain className="text-[#FF5A5F] w-6 h-6" />
+              <Brain className="text-brand-light w-6 h-6" />
               <h2 className="text-xl font-bold">Knowledge Mastery</h2>
             </div>
             <div className="h-64">

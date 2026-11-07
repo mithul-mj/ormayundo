@@ -1,5 +1,6 @@
 import { API_URL, WEB_APP_URL } from "./config";
 import { GCM_CONFIG, MESSAGES } from "./constants";
+import { COLORS } from "./theme";
 
 // Authenticated fetch helper with automatic token refresh
 async function fetchWithAuth(url, options) {
@@ -137,14 +138,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (!sourceUrl) {
         console.error('[background.js] Tab URL missing, cannot save recall.');
         chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
         return;
       }
 
       console.log('[background.js] Right-click menu clicked! Saving text:', selectedText);
       chrome.action.setBadgeText({ text: '...' });
-      chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+      chrome.action.setBadgeBackgroundColor({ color: COLORS.brandLight });
 
       try {
         const payload = { selectedText, sourceUrl };
@@ -158,12 +159,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         if (!res.ok) throw new Error('Server returned ' + res.status);
         console.log('[background.js] Successfully saved to backend!');
         chrome.action.setBadgeText({ text: '✓' });
-        chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeSuccess });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
       } catch (error) {
         console.error('[background.js] Error saving from context menu:', error);
         chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
       }
     };
@@ -179,7 +180,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         } else {
           console.error('[background.js] Error from content script and no native selection available:', chrome.runtime.lastError?.message || response?.error);
           chrome.action.setBadgeText({ text: 'X' });
-          chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+          chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
           setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
           return;
         }
@@ -193,7 +194,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Listen for Login/Logout events from App.jsx to manage menus dynamically
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'USER_LOGIN') {
     createMenus();
     syncFcmToken();
@@ -210,7 +211,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('[background.js] Floating button clicked! Saving text:', request.text);
 
     chrome.action.setBadgeText({ text: '...' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF5A5F' });
+    chrome.action.setBadgeBackgroundColor({ color: COLORS.brandLight });
 
     (async () => {
       try {
@@ -225,14 +226,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         console.log('[background.js] Successfully saved to backend!');
         chrome.action.setBadgeText({ text: '✓' });
-        chrome.action.setBadgeBackgroundColor({ color: '#00C853' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeSuccess });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
 
         sendResponse({ success: true });
       } catch (error) {
         console.error('[background.js] Error saving from floating button:', error);
         chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
         setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
 
         sendResponse({ success: false, error: error.message });
@@ -272,7 +273,7 @@ async function sendHighlights(tabId, url) {
         target: { tabId, allFrames: true },
         files: ['content.js']
       });
-    } catch (_) {
+    } catch {
       // Already injected or restricted page – proceed anyway
     }
 
@@ -282,7 +283,7 @@ async function sendHighlights(tabId, url) {
     chrome.tabs.sendMessage(tabId, { action: 'HIGHLIGHT_PAGE', highlights }, () => {
       if (chrome.runtime.lastError) { /* ignore – content script may still be loading */ }
     });
-  } catch (e) {
+  } catch {
     // User not logged in or network issue — don't surface errors
   }
 }
@@ -298,7 +299,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
     sendHighlights(activeInfo.tabId, tab.url);
-  } catch (_) { }
+  } catch {
+    // Ignore tab access errors
+  }
 });
 
 

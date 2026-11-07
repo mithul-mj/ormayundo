@@ -1,16 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
-
-@theme {
-  --font-sans: "Outfit", sans-serif;
-  --color-brand: #FF5A5F;
-  --color-brand-dark: #FF385C;
-}
+@import "./theme.css";
 
 body {
   margin: 0;
-  background-color: #fafafa;
-  background-image: radial-gradient(#FF5A5F15 1px, transparent 1px);
+  background-color: var(--color-surface);
+  background-image: radial-gradient(rgba(255, 56, 92, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
   font-family: "Outfit", sans-serif;
   -webkit-font-smoothing: antialiased;

@@ -124,11 +124,11 @@ function App() {
               role="switch"
               aria-checked={popupEnabled}
               onClick={togglePopup}
-              className="flex items-center gap-2 text-xs font-medium text-[#717171] hover:text-[#222222] transition-colors cursor-pointer select-none"
+              className="flex items-center gap-2 text-xs font-medium text-muted hover:text-ink transition-colors cursor-pointer select-none"
             >
               <span>Auto-Popup</span>
               <div
-                className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${popupEnabled ? 'bg-[#FF385C]' : 'bg-gray-200'
+                className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${popupEnabled ? 'bg-brand' : 'bg-gray-200'
                   }`}
               >
                 <div
@@ -144,7 +144,7 @@ function App() {
             {/* Airbnb-style Logout Button */}
             <button
               onClick={handleLogout}
-              className="text-xs font-medium text-[#717171] hover:text-[#222222] transition-colors cursor-pointer"
+              className="text-xs font-medium text-muted hover:text-ink transition-colors cursor-pointer"
               title="Logout"
             >
               Logout

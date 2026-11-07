@@ -1,12 +1,10 @@
-import React from 'react';
-
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full p-10 bg-white shadow-xl rounded-3xl border border-gray-100 text-gray-800">
 
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A5F] to-[#FF385C] tracking-tighter">
+          <h1 className="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-brand-light to-brand tracking-tighter">
             Ormayundo Privacy Policy
           </h1>
           <p className="text-gray-400 font-medium">Effective Date: August 2026</p>
@@ -49,7 +47,7 @@ export default function Privacy() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-gray-100 text-center">
-          <a href="/" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-[#FF5A5F] to-[#FF385C] hover:opacity-90 transition-opacity shadow-md">
+          <a href="/" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-brand-light to-brand hover:opacity-90 transition-opacity shadow-md">
             Return to Dashboard
           </a>
         </div>
