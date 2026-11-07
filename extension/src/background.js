@@ -1,76 +1,38 @@
-import { initializeApp } from "firebase/app";
-import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
-import { API_URL } from "./config";
+import { API_URL, WEB_APP_URL } from "./config";
+import { GCM_CONFIG, MESSAGES } from "./constants";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDysR_QcERUV1mH0OSjkIKeOo2nm9edobc",
-  authDomain: "ormayundo-4f8c5.firebaseapp.com",
-  projectId: "ormayundo-4f8c5",
-  storageBucket: "ormayundo-4f8c5.firebasestorage.app",
-  messagingSenderId: "261551023957",
-  appId: "1:261551023957:web:5c28db3528f113244d31dc",
-  measurementId: "G-1KZ9ST0Q4S"
-};
-
-// Initialize Firebase specifically for the Service Worker context
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-// Custom fetch wrapper to handle 401 Unauthorized and refresh the token
+// Authenticated fetch helper with automatic token refresh
 async function fetchWithAuth(url, options) {
   let response = await fetch(url, options);
 
   if (response.status === 401) {
-    console.log('[background.js] 401 Unauthorized. Attempting to refresh token...');
-    // Attempt to hit the refresh endpoint
+    console.log('[background.js] 401 Unauthorized. Attempting token refresh...');
     const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include'
     });
 
     if (refreshResponse.ok) {
-      console.log('[background.js] Token refreshed successfully! Retrying original request...');
-      // Retry the original request
+      console.log('[background.js] Token refreshed. Retrying request...');
       response = await fetch(url, options);
     } else {
-      console.error('[background.js] Refresh token failed. User must log in manually.');
+      console.error('[background.js] Token refresh failed. User must log in.');
     }
   }
 
   return response;
 }
 
-// Listen for Push Notifications from the backend
-onBackgroundMessage(messaging, (payload) => {
-  console.log('[background.js] Received Firebase push message', payload);
-
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icon.png',
-    title: payload.notification?.title || 'Time for Ormayundo!',
-    message: payload.notification?.body || 'You have flashcards due.',
-    priority: 2
-  }, (notificationId) => {
-    if (chrome.runtime.lastError) {
-      console.error('[background.js] Failed to show visual notification:', chrome.runtime.lastError.message);
-    } else {
-      console.log('[background.js] Visual notification displayed successfully! ID:', notificationId);
-    }
-  });
-});
-
-const SENDER_ID = "261551023957";
-
-// Native GCM registration for Chrome MV3 Extensions
+// Option A: Native chrome.gcm registration for Chrome MV3 Extensions
 const syncFcmToken = async () => {
   if (typeof chrome === 'undefined' || !chrome.gcm) {
     console.warn('[background.js] chrome.gcm is not available');
     return;
   }
 
-  chrome.gcm.register([SENDER_ID], async (registrationId) => {
+  chrome.gcm.register([GCM_CONFIG.SENDER_ID], async (registrationId) => {
     if (chrome.runtime.lastError) {
-      console.error('[background.js] GCM Registration failed:', chrome.runtime.lastError.message);
+      console.error('[background.js]', MESSAGES.ERROR.TOKEN_SYNC_FAILED, chrome.runtime.lastError.message);
       return;
     }
 
@@ -79,7 +41,7 @@ const syncFcmToken = async () => {
       return;
     }
 
-    console.log('[background.js] GCM token obtained:', registrationId);
+    console.log('[background.js] Native GCM token acquired:', registrationId);
     try {
       await fetchWithAuth(`${API_URL}/auth/fcm-token`, {
         method: 'POST',
@@ -87,26 +49,47 @@ const syncFcmToken = async () => {
         credentials: 'include',
         body: JSON.stringify({ token: registrationId })
       });
-      console.log('[background.js] GCM token synced with backend!');
+      console.log('[background.js]', MESSAGES.SUCCESS.TOKEN_SYNCED);
     } catch (err) {
-      console.error('[background.js] Failed to send GCM token to backend:', err);
+      console.error('[background.js]', MESSAGES.ERROR.TOKEN_SYNC_FAILED, err);
     }
   });
 };
 
-// Listen for native GCM push messages from Firebase Admin SDK
+// Native GCM push notification listener
 if (typeof chrome !== 'undefined' && chrome.gcm) {
   chrome.gcm.onMessage.addListener((message) => {
     console.log('[background.js] Received GCM push message:', message);
-    const title = message.data?.title || message.notification?.title || 'Time for Ormayundo!';
-    const body = message.data?.body || message.notification?.body || 'You have flashcards due for active recall.';
+    const title = message.data?.title || message.notification?.title || MESSAGES.UI.NOTIFICATION_TITLE;
+    const body = message.data?.body || message.notification?.body || MESSAGES.UI.NOTIFICATION_BODY;
 
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icon.png',
+      iconUrl: chrome.runtime.getURL('icon.png'),
       title,
       message: body,
       priority: 2
+    });
+  });
+}
+
+// Focus or open web app on notification click
+if (typeof chrome !== 'undefined' && chrome.notifications) {
+  chrome.notifications.onClicked.addListener((notificationId) => {
+    if (chrome.notifications.clear) {
+      chrome.notifications.clear(notificationId);
+    }
+    const appUrl = `${WEB_APP_URL}/app`;
+    chrome.tabs.query({}, (tabs) => {
+      const existingTab = tabs.find(t => t.url && t.url.includes(WEB_APP_URL));
+      if (existingTab && existingTab.id) {
+        chrome.tabs.update(existingTab.id, { active: true });
+        if (existingTab.windowId) {
+          chrome.windows.update(existingTab.windowId, { focused: true });
+        }
+      } else {
+        chrome.tabs.create({ url: appUrl });
+      }
     });
   });
 }

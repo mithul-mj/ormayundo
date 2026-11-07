@@ -17,9 +17,9 @@ const messaging = firebase.messaging();
 // Display push notification when web app is in background or closed
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message:', payload);
-  const title = payload.notification?.title || 'Time for Ormayundo!';
+  const title = payload.notification?.title || payload.data?.title || 'Time for Ormayundo!';
   const options = {
-    body: payload.notification?.body || 'You have flashcards due for active recall.',
+    body: payload.notification?.body || payload.data?.body || 'You have flashcards due for active recall.',
     icon: '/favicon.svg',
     badge: '/favicon.svg',
     data: { url: '/app' }
@@ -44,3 +44,4 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+

@@ -52,10 +52,14 @@ export const googleAuth = async (req, res) => {
 export const logoutUser = async (req, res) => {
   res.cookie(AUTH_COOKIES.ACCESS_TOKEN, '', {
     httpOnly: true,
+    secure: true,
+    sameSite: 'none',
     expires: new Date(0)
   });
   res.cookie(AUTH_COOKIES.REFRESH_TOKEN, '', {
     httpOnly: true,
+    secure: true,
+    sameSite: 'none',
     path: '/api/auth/refresh',
     expires: new Date(0)
   });

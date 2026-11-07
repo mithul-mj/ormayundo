@@ -1,26 +1,15 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-
-export const firebaseConfig = {
-  apiKey: "AIzaSyDysR_QcERUV1mH0OSjkIKeOo2nm9edobc",
-  authDomain: "ormayundo-4f8c5.firebaseapp.com",
-  projectId: "ormayundo-4f8c5",
-  storageBucket: "ormayundo-4f8c5.firebasestorage.app",
-  messagingSenderId: "261551023957",
-  appId: "1:261551023957:web:5c28db3528f113244d31dc",
-  measurementId: "G-1KZ9ST0Q4S"
-};
-
-export const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
+import { FIREBASE_CONFIG, VAPID_KEY, MESSAGES } from "../constants";
 
 // Initialize Firebase for web client
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(FIREBASE_CONFIG);
 export const messaging = typeof window !== 'undefined' && 'Notification' in window ? getMessaging(app) : null;
 
 // Initialize web push notifications, register service worker, and sync FCM token
 export const initWebPush = async (apiUrl) => {
   if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
-    console.log('[WebPush] Push notifications not supported in this browser.');
+    console.log('[WebPush]', MESSAGES.ERROR.PUSH_UNSUPPORTED);
     return null;
   }
 
@@ -28,7 +17,7 @@ export const initWebPush = async (apiUrl) => {
     // 1. Request notification permission
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.log('[WebPush] Notification permission denied or dismissed.');
+      console.log('[WebPush]', MESSAGES.ERROR.PERMISSION_DENIED);
       return null;
     }
 
@@ -50,7 +39,7 @@ export const initWebPush = async (apiUrl) => {
         credentials: 'include',
         body: JSON.stringify({ token })
       });
-      console.log('[WebPush] Web FCM Token synced successfully!');
+      console.log('[WebPush]', MESSAGES.SUCCESS.TOKEN_SYNCED);
     }
 
     // 4. Listen for incoming foreground messages
@@ -66,7 +55,7 @@ export const initWebPush = async (apiUrl) => {
 
     return token;
   } catch (error) {
-    console.warn('[WebPush] Failed to register web push:', error);
+    console.warn('[WebPush]', MESSAGES.ERROR.REGISTRATION_FAILED, error);
     return null;
   }
 };

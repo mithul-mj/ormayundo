@@ -17,12 +17,13 @@ import api from '../api';
 import { calculateIntervalsForCard } from '../services/spacedRepetition';
 import { MESSAGES } from '../constants';
 
-const Dashboard = () => {
+const Dashboard = ({ onLogout }) => {
   const [dueCards, setDueCards] = useState([]);
   const [decks, setDecks] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ show: false, type: null }); // 'single' | 'all'
 
@@ -33,30 +34,31 @@ const Dashboard = () => {
   const [editError, setEditError] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
+  const fetchCards = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const [cardsRes, decksRes] = await Promise.all([
+        api.get('/recall/due'),
+        api.get('/decks')
+      ]);
+      setDueCards(cardsRes.data);
+      setDecks(decksRes.data);
+    } catch (error) {
+      console.error('Failed to fetch due cards:', error);
+      if (error.isAuthError || error.response?.status === 401) {
+        onLogout?.();
+      } else {
+        setFetchError(MESSAGES.ERROR.FETCH_FAILED);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [onLogout]);
 
   useEffect(() => {
-    let ignore = false;
-    const fetchCards = async () => {
-      try {
-        const [cardsRes, decksRes] = await Promise.all([
-          api.get('/recall/due'),
-          api.get('/decks')
-        ]);
-        if (!ignore) {
-          setDueCards(cardsRes.data);
-          setDecks(decksRes.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch due cards:', error);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
     fetchCards();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  }, [fetchCards]);
 
   const getDeckColor = (deckName) => {
     const found = decks.find(d => d.name.toLowerCase() === (deckName || 'general').toLowerCase());
@@ -93,6 +95,11 @@ const Dashboard = () => {
       setCurrentCardIndex((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to submit review:', error);
+      if (error.isAuthError || error.response?.status === 401) {
+        onLogout?.();
+      } else {
+        showToast(MESSAGES.ERROR.NETWORK_ERROR);
+      }
     }
   };
 
@@ -111,6 +118,7 @@ const Dashboard = () => {
       showToast(MESSAGES.CARD_DELETED);
     } catch (error) {
       console.error('Failed to delete card:', error);
+      showToast(MESSAGES.ERROR.DELETE_CARD_FAILED);
     }
   };
 
@@ -123,6 +131,7 @@ const Dashboard = () => {
       showToast(MESSAGES.ALL_DELETED);
     } catch (error) {
       console.error('Failed to delete all cards:', error);
+      showToast(MESSAGES.ERROR.DELETE_CARD_FAILED);
     }
   };
 
@@ -176,7 +185,7 @@ const Dashboard = () => {
       showToast(MESSAGES.CARD_SAVED);
     } catch (err) {
       console.error('Failed to update question:', err);
-      setEditError(err.response?.data?.message || 'Failed to update question. Please try again.');
+      setEditError(err.response?.data?.message || MESSAGES.ERROR.UPDATE_QUESTION_FAILED);
     } finally {
       setIsSaving(false);
     }
@@ -200,6 +209,22 @@ const Dashboard = () => {
 
   if (loading) {
     return <div className="p-8 text-center text-gray-500">{MESSAGES.CHECKING_MEMORY}</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
+        <h2 className="text-base font-bold text-gray-800">Connection Error</h2>
+        <p className="text-gray-500 mt-1 text-xs mb-4">{fetchError}</p>
+        <button
+          onClick={fetchCards}
+          className="px-4 py-2 bg-[#FF385C] text-white text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+        >
+          Try Again
+        </button>
+      </div>
+    );
   }
 
   // If all caught up

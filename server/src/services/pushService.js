@@ -24,6 +24,7 @@ export const sendPushNotification = async (fcmToken, title, body) => {
   try {
     const message = {
       notification: { title, body },
+      data: { title, body },
       token: fcmToken
     };
 
@@ -35,9 +36,12 @@ export const sendPushNotification = async (fcmToken, title, body) => {
   } catch (error) {
     console.error('Error sending push notification:', error.message);
 
-    // Automatically remove dead tokens
-    if (error.code === 'messaging/registration-token-not-registered') {
-      console.log(`[Push Service] Token is dead. Deleting token ${fcmToken} from database...`);
+    // Automatically remove dead/invalid tokens
+    if (
+      error.code === 'messaging/registration-token-not-registered' ||
+      error.code === 'messaging/invalid-registration-token'
+    ) {
+      console.log(`[Push Service] Token is invalid or dead. Deleting token ${fcmToken} from database...`);
       await User.updateMany(
         { $or: [{ fcmToken: fcmToken }, { fcmTokens: fcmToken }] },
         { 

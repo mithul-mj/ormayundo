@@ -1,74 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import api from './api';
+import { WEB_APP_URL } from './config';
 import './index.css';
-import { API_URL } from './config';
-import { requestFirebaseToken } from './services/firebase';
 
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [popupEnabled, setPopupEnabled] = useState(true);
 
-  // Sync token to backend via background GCM and web SDK
-  const syncFcmToken = async () => {
+  // Sync token to backend via background GCM
+  const syncFcmToken = () => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.sendMessage({ action: 'SYNC_FCM_TOKEN' });
     }
-
-    try {
-      const token = await requestFirebaseToken();
-      if (token) {
-        await fetch(`${API_URL}/auth/fcm-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ token })
-        });
-      }
-    } catch (e) {
-      console.warn('[FCM] Web SDK token sync skipped:', e);
-    }
   };
 
-  // 1. Check if we are already logged in when the popup opens!
-  useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['ormayundo_user', 'ormayundo_popup_enabled'], (result) => {
-        if (result.ormayundo_user) {
-          setUser(result.ormayundo_user);
-          // Try to get and sync FCM token whenever popup opens while logged in
-          syncFcmToken();
-        }
-        if (result.ormayundo_popup_enabled !== undefined) {
-          setPopupEnabled(result.ormayundo_popup_enabled);
-        }
-        setIsLoading(false);
-      });
-    } else {
-      const savedUser = localStorage.getItem('ormayundo_user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-        syncFcmToken();
-      }
-      setIsLoading(false);
-    }
-  }, []);
-
-  // 2. Save the user data locally when they log in successfully
-  const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    syncFcmToken(); // Sync token on fresh login
-
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ ormayundo_user: userData });
-      chrome.runtime.sendMessage({ action: 'USER_LOGIN' });
-    } else {
-      localStorage.setItem('ormayundo_user', JSON.stringify(userData));
-    }
-  };
-
-  const handleLogout = () => {
+  const handleLogout = useCallback(async () => {
     setUser(null);
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.remove(['ormayundo_user']);
@@ -76,7 +25,70 @@ function App() {
     } else {
       localStorage.removeItem('ormayundo_user');
     }
-    // Note: To be 100% secure, we should also call the backend /logout here to clear the HTTP-only cookies.
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore network errors on logout
+    }
+  }, []);
+
+  // 1. Verify session with server on popup open
+  useEffect(() => {
+    let ignore = false;
+    const initAuth = async () => {
+      try {
+        let savedUser = null;
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          const result = await chrome.storage.local.get(['ormayundo_user', 'ormayundo_popup_enabled']);
+          savedUser = result.ormayundo_user;
+          if (result.ormayundo_popup_enabled !== undefined) {
+            setPopupEnabled(result.ormayundo_popup_enabled);
+          }
+        } else {
+          const local = localStorage.getItem('ormayundo_user');
+          if (local) savedUser = JSON.parse(local);
+        }
+
+        if (savedUser && !ignore) {
+          setUser(savedUser); // Optimistic load
+          setIsLoading(false);
+          try {
+            const meRes = await api.get('/auth/me');
+            if (!ignore && meRes.data?.user) {
+              setUser(meRes.data.user);
+            }
+            syncFcmToken();
+          } catch (authErr) {
+            if (authErr.isAuthError || authErr.response?.status === 401) {
+              if (!ignore) handleLogout();
+            }
+          }
+        } else {
+          if (!ignore) setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        if (!ignore) setIsLoading(false);
+      }
+    };
+
+    initAuth();
+    return () => {
+      ignore = true;
+    };
+  }, [handleLogout]);
+
+  // 2. Save the user data locally when they log in successfully
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    syncFcmToken();
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ ormayundo_user: userData });
+      chrome.runtime.sendMessage({ action: 'USER_LOGIN' });
+    } else {
+      localStorage.setItem('ormayundo_user', JSON.stringify(userData));
+    }
   };
 
   const togglePopup = () => {
@@ -97,7 +109,7 @@ function App() {
       {/* Minimalist Header */}
       <header className="flex items-center justify-between p-4 border-b border-gray-100">
         <a
-          href="https://ormayundo-woad.vercel.app/"
+          href={WEB_APP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="font-bold text-xl tracking-tight text-brand hover:opacity-80 transition-opacity cursor-pointer"
@@ -145,7 +157,7 @@ function App() {
         {!user ? (
           <Auth onLoginSuccess={handleLoginSuccess} />
         ) : (
-          <Dashboard user={user} />
+          <Dashboard user={user} onLogout={handleLogout} />
         )}
       </main>
 

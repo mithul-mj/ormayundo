@@ -17,16 +17,23 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Attempt to hit the refresh endpoint
-        // This endpoint will receive the refreshToken because its path matches /api/auth/refresh
         await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
-        
-        // If successful, the new accessToken is in our cookies now. Retry the original request!
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh token is also expired or missing. User must log in again.
+        // Clear local user data when refresh token fails
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.remove(['ormayundo_user']);
+          chrome.runtime.sendMessage({ action: 'USER_LOGOUT' });
+        } else {
+          localStorage.removeItem('ormayundo_user');
+        }
+        refreshError.isAuthError = true;
         return Promise.reject(refreshError);
       }
+    }
+
+    if (error.response?.status === 401) {
+      error.isAuthError = true;
     }
 
     return Promise.reject(error);
