@@ -15,6 +15,9 @@ const userSchema = new mongoose.Schema({
     fcmToken: {
         type: String
     },
+    fcmTokens: [{
+        type: String
+    }],
     currentStreak: {
         type: Number,
         default: 0

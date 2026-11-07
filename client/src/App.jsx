@@ -6,6 +6,7 @@ import LandingPage from './LandingPage';
 import Auth from './Auth';
 import Privacy from './Privacy';
 import { API_URL } from './config';
+import { initWebPush } from './services/firebase';
 import axios from 'axios';
 
 export default function App() {
@@ -48,6 +49,13 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  // Sync web push notification token when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      initWebPush(API_URL);
+    }
+  }, [isAuthenticated]);
 
   // Initial loader
   if (loading) {

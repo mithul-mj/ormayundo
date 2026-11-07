@@ -42,6 +42,7 @@
     }
   ],
   "permissions": [
+    "gcm",
     "tabs",
     "scripting",
     "storage",

@@ -3,14 +3,33 @@ import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import './index.css';
 import { API_URL } from './config';
+import { requestFirebaseToken } from './services/firebase';
 
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [popupEnabled, setPopupEnabled] = useState(true);
 
-  // VAPID KEY
-  const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
+  // Sync token to backend via background GCM and web SDK
+  const syncFcmToken = async () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({ action: 'SYNC_FCM_TOKEN' });
+    }
+
+    try {
+      const token = await requestFirebaseToken();
+      if (token) {
+        await fetch(`${API_URL}/auth/fcm-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ token })
+        });
+      }
+    } catch (e) {
+      console.warn('[FCM] Web SDK token sync skipped:', e);
+    }
+  };
 
   // 1. Check if we are already logged in when the popup opens!
   useEffect(() => {
@@ -35,12 +54,6 @@ function App() {
       setIsLoading(false);
     }
   }, []);
-
-  const syncFcmToken = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ action: 'SYNC_FCM_TOKEN' });
-    }
-  };
 
   // 2. Save the user data locally when they log in successfully
   const handleLoginSuccess = (userData) => {

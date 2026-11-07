@@ -23,3 +23,4 @@ export const MESSAGES = {
   ALL_CAUGHT_UP: "You're all caught up!",
   NO_CARDS_DUE: 'No flashcards due right now. Go highlight some text to learn more!'
 };
+

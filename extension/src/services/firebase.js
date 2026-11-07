@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken } from "firebase/messaging";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDysR_QcERUV1mH0OSjkIKeOo2nm9edobc",
   authDomain: "ormayundo-4f8c5.firebaseapp.com",
   projectId: "ormayundo-4f8c5",
@@ -11,22 +11,21 @@ const firebaseConfig = {
   measurementId: "G-1KZ9ST0Q4S"
 };
 
-// Initialize Firebase
+export const VAPID_KEY = "BH-3PZlKBc-8yvnygadCUQitn85ECyWa_iFrniI8YP1KHU1tX3X7kbc8fxw5q12NQiRhWUd2GeuX7M1JJdGgpXg";
+
+// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 export const messaging = getMessaging(app);
 
-// Request permission and get FCM Token
-export const requestFirebaseToken = async (vapidKey) => {
+// Request permission and get FCM Token in DOM/Window context
+export const requestFirebaseToken = async () => {
   try {
-    // In Chrome Extensions, "notifications" permission is auto-granted via manifest.json!
-    const currentToken = await getToken(messaging, { vapidKey });
+    const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
     if (currentToken) {
       return currentToken;
-    } else {
-      console.warn('No registration token available.');
     }
   } catch (error) {
-    console.error('An error occurred while retrieving FCM token: ', error);
+    console.warn('[FCM] Token retrieval via Web SDK skipped/failed:', error.message);
   }
   return null;
 };

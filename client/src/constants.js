@@ -26,3 +26,4 @@ export const MESSAGES = {
   EXTENSION_ZIP_NAME: 'ormayundo-extension.zip',
   CHROME_EXTENSIONS_URL: 'chrome://extensions'
 };
+

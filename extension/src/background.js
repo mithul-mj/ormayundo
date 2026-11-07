@@ -59,14 +59,57 @@ onBackgroundMessage(messaging, (payload) => {
   });
 });
 
+const SENDER_ID = "261551023957";
+
+// Native GCM registration for Chrome MV3 Extensions
 const syncFcmToken = async () => {
-  try {
-    console.log("[background.js] FCM Token generation is temporarily disabled in the background script because the Firebase Messaging DOM library crashes MV3 Service Workers.");
-    // TODO: Implement FCM token generation using an Offscreen Document.
-  } catch (e) {
-    console.error("[background.js] Failed to generate/sync FCM Token", e);
+  if (typeof chrome === 'undefined' || !chrome.gcm) {
+    console.warn('[background.js] chrome.gcm is not available');
+    return;
   }
+
+  chrome.gcm.register([SENDER_ID], async (registrationId) => {
+    if (chrome.runtime.lastError) {
+      console.error('[background.js] GCM Registration failed:', chrome.runtime.lastError.message);
+      return;
+    }
+
+    if (!registrationId) {
+      console.warn('[background.js] No GCM registrationId returned');
+      return;
+    }
+
+    console.log('[background.js] GCM token obtained:', registrationId);
+    try {
+      await fetchWithAuth(`${API_URL}/auth/fcm-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token: registrationId })
+      });
+      console.log('[background.js] GCM token synced with backend!');
+    } catch (err) {
+      console.error('[background.js] Failed to send GCM token to backend:', err);
+    }
+  });
 };
+
+// Listen for native GCM push messages from Firebase Admin SDK
+if (typeof chrome !== 'undefined' && chrome.gcm) {
+  chrome.gcm.onMessage.addListener((message) => {
+    console.log('[background.js] Received GCM push message:', message);
+    const title = message.data?.title || message.notification?.title || 'Time for Ormayundo!';
+    const body = message.data?.body || message.notification?.body || 'You have flashcards due for active recall.';
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon.png',
+      title,
+      message: body,
+      priority: 2
+    });
+  });
+}
 
 // Helper to create menus
 function createMenus() {

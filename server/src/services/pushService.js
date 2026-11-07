@@ -27,7 +27,6 @@ export const sendPushNotification = async (fcmToken, title, body) => {
       token: fcmToken
     };
 
-    // If firebase is initialized properly, send it
     if (admin.apps.length > 0) {
       await admin.messaging().send(message);
     } else {
@@ -36,12 +35,15 @@ export const sendPushNotification = async (fcmToken, title, body) => {
   } catch (error) {
     console.error('Error sending push notification:', error.message);
 
-    // BEST PRACTICE: Automatically delete dead tokens so we don't spam Firebase!
+    // Automatically remove dead tokens
     if (error.code === 'messaging/registration-token-not-registered') {
       console.log(`[Push Service] Token is dead. Deleting token ${fcmToken} from database...`);
       await User.updateMany(
-        { fcmToken: fcmToken },
-        { $unset: { fcmToken: "" } }
+        { $or: [{ fcmToken: fcmToken }, { fcmTokens: fcmToken }] },
+        { 
+          $unset: { fcmToken: "" },
+          $pull: { fcmTokens: fcmToken }
+        }
       );
     }
   }
@@ -76,26 +78,43 @@ export const startCronJobs = () => {
 
       if (dueByUser.length === 0) return;
 
-      // Fetch FCM tokens for these specific users
+      // Fetch FCM tokens (both single and multi-device array) for these users
       const userIds = dueByUser.map(item => item._id);
-      const users = await User.find({ _id: { $in: userIds }, fcmToken: { $exists: true, $ne: null } }).lean();
+      const users = await User.find({
+        _id: { $in: userIds },
+        $or: [
+          { fcmToken: { $exists: true, $ne: null } },
+          { 'fcmTokens.0': { $exists: true } }
+        ]
+      }).lean();
 
-      const tokenMap = new Map();
+      const userTokensMap = new Map();
       users.forEach(user => {
-        tokenMap.set(user._id.toString(), user.fcmToken);
+        const tokens = new Set();
+        if (user.fcmToken) tokens.add(user.fcmToken);
+        if (Array.isArray(user.fcmTokens)) {
+          user.fcmTokens.forEach(t => { if (t) tokens.add(t); });
+        }
+        if (tokens.size > 0) {
+          userTokensMap.set(user._id.toString(), Array.from(tokens));
+        }
       });
 
       const notifiedUserIds = [];
 
-      // Process push notifications in parallel chunks of 10 to handle high concurrency
+      // Process push notifications in parallel chunks of 10
       const BATCH_SIZE = 10;
       for (let i = 0; i < dueByUser.length; i += BATCH_SIZE) {
         const batch = dueByUser.slice(i, i + BATCH_SIZE);
         await Promise.allSettled(
           batch.map(async (group) => {
-            const token = tokenMap.get(group._id.toString());
-            if (token) {
-              await sendPushNotification(token, 'Time for Ormayundo!', `You have ${group.count} flashcards due for active recall.`);
+            const tokens = userTokensMap.get(group._id.toString());
+            if (tokens && tokens.length > 0) {
+              await Promise.allSettled(
+                tokens.map(token => 
+                  sendPushNotification(token, 'Time for Ormayundo!', `You have ${group.count} flashcards due for active recall.`)
+                )
+              );
               notifiedUserIds.push(group._id);
             }
           })

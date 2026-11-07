@@ -72,10 +72,18 @@ export const getMe = async (req, res) => {
   });
 };
 
-// Persist FCM device token for push notifications
+// Persist FCM device token for push notifications (multi-device support)
 export const saveFcmToken = async (req, res) => {
   const { token } = req.body;
+  if (!token) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Token required' });
+  }
+
   req.user.fcmToken = token;
+  if (!req.user.fcmTokens) req.user.fcmTokens = [];
+  if (!req.user.fcmTokens.includes(token)) {
+    req.user.fcmTokens.push(token);
+  }
   await req.user.save();
 
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.SUCCESS.FCM_TOKEN_SAVED });
