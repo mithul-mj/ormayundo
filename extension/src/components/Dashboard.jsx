@@ -15,6 +15,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import api from '../api';
 import { calculateIntervalsForCard } from '../services/spacedRepetition';
+import { MESSAGES } from '../constants';
 
 const Dashboard = () => {
   const [dueCards, setDueCards] = useState([]);
@@ -107,7 +108,7 @@ const Dashboard = () => {
       setDueCards((prev) => prev.filter((_, idx) => idx !== currentCardIndex));
       setIsFlipped(false);
       setDeleteModal({ show: false, type: null });
-      showToast('Flashcard deleted');
+      showToast(MESSAGES.CARD_DELETED);
     } catch (error) {
       console.error('Failed to delete card:', error);
     }
@@ -119,7 +120,7 @@ const Dashboard = () => {
       setDueCards([]);
       setIsFlipped(false);
       setDeleteModal({ show: false, type: null });
-      showToast('All flashcards wiped');
+      showToast(MESSAGES.ALL_DELETED);
     } catch (error) {
       console.error('Failed to delete all cards:', error);
     }
@@ -143,7 +144,7 @@ const Dashboard = () => {
   const handleSaveEdit = useCallback(async (e) => {
     if (e) e.preventDefault();
     if (!editQuestion.trim()) {
-      setEditError('Question cannot be empty.');
+      setEditError(MESSAGES.EMPTY_QUESTION);
       return;
     }
 
@@ -160,7 +161,6 @@ const Dashboard = () => {
 
       const { data } = await api.put(`/recall/${card._id}`, payload);
 
-      // Update in-memory state
       setDueCards((prev) =>
         prev.map((c, idx) =>
           idx === currentCardIndex
@@ -173,7 +173,7 @@ const Dashboard = () => {
       );
 
       setIsEditing(false);
-      showToast('Question updated successfully!');
+      showToast(MESSAGES.CARD_SAVED);
     } catch (err) {
       console.error('Failed to update question:', err);
       setEditError(err.response?.data?.message || 'Failed to update question. Please try again.');
@@ -199,7 +199,7 @@ const Dashboard = () => {
   }, [isEditing, handleSaveEdit]);
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Checking your memory bank...</div>;
+    return <div className="p-8 text-center text-gray-500">{MESSAGES.CHECKING_MEMORY}</div>;
   }
 
   // If all caught up
@@ -207,8 +207,8 @@ const Dashboard = () => {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-        <h2 className="text-xl font-bold text-gray-800">You're all caught up!</h2>
-        <p className="text-gray-500 mt-2 text-sm">No flashcards due right now. Go highlight some text to learn more!</p>
+        <h2 className="text-xl font-bold text-gray-800">{MESSAGES.ALL_CAUGHT_UP}</h2>
+        <p className="text-gray-500 mt-2 text-sm">{MESSAGES.NO_CARDS_DUE}</p>
       </div>
     );
   }
