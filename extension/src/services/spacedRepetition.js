@@ -2,8 +2,11 @@
  * Spaced Repetition Engine (Extension Client)
  *
  * Provides accurate, distinct durations for all 4 ratings (Forgot, Hard, Good, Easy)
- * matching the backend algorithm.
+ * matching the backend algorithm, capped at a maximum interval.
  */
+
+// Maximum interval cap: cards will be reviewed at least once every 365 days (1 year)
+export const MAX_INTERVAL_DAYS = 365;
 
 export const calculateIntervalsForCard = (
   interval = 0,
@@ -77,6 +80,7 @@ export const calculateIntervalsForCard = (
     } else {
       goodDays = Math.max(baseInterval + 1, Math.round(baseInterval * currentEF));
     }
+    goodDays = Math.min(MAX_INTERVAL_DAYS, goodDays);
 
     // 2. Hard interval: conservative growth (~1.2x), strictly smaller than goodDays
     let hardDays;
@@ -89,9 +93,20 @@ export const calculateIntervalsForCard = (
     if (hardDays >= goodDays) {
       hardDays = Math.max(1, goodDays - 1);
     }
+    hardDays = Math.min(MAX_INTERVAL_DAYS, hardDays);
 
-    // 3. Easy interval: easy bonus (~1.3x over Good), strictly greater than goodDays
-    let easyDays = Math.max(goodDays + 1, Math.round(goodDays * 1.3));
+    // 3. Easy interval: easy bonus (~1.3x over Good), capped at MAX_INTERVAL_DAYS
+    let easyDays = Math.min(
+      MAX_INTERVAL_DAYS,
+      Math.max(goodDays + 1, Math.round(goodDays * 1.3))
+    );
+    // If goodDays has reached the cap, easyDays is also capped at MAX_INTERVAL_DAYS
+    if (goodDays >= MAX_INTERVAL_DAYS) {
+      easyDays = MAX_INTERVAL_DAYS;
+      if (hardDays >= MAX_INTERVAL_DAYS) {
+        hardDays = Math.max(1, MAX_INTERVAL_DAYS - 1);
+      }
+    }
 
     // EF adjustments
     const forgotEF = Math.max(1.3, Math.round((currentEF - 0.2) * 100) / 100);
