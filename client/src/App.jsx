@@ -1,19 +1,32 @@
-import { useState, useEffect } from 'react';
-import { LayoutDashboard, Library, Loader2, Brain } from 'lucide-react';
-import AnalyticsDashboard from './AnalyticsDashboard';
-import FlashcardManager from './FlashcardManager';
-import LandingPage from './LandingPage';
-import Auth from './Auth';
-import Privacy from './Privacy';
-import { API_URL } from './config';
-import { initWebPush } from './services/firebase';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from './shared/config';
+import { initWebPush } from './shared/services/firebase';
+import { DashboardNavbar } from './shared/components';
+
+// Code-split feature domains for scalability and fast initial load
+const LandingPage = lazy(() => import('./features/landing'));
+const AnalyticsDashboard = lazy(() => import('./features/analytics'));
+const FlashcardManager = lazy(() => import('./features/flashcards'));
+const Auth = lazy(() => import('./features/auth'));
+const Privacy = lazy(() => import('./features/privacy'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <Loader2 className="animate-spin text-brand w-8 h-8" />
+    </div>
+  );
+}
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'manage'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(() => window.location.pathname !== '/privacy');
+  const [loading, setLoading] = useState(
+    () => window.location.pathname !== '/privacy'
+  );
 
   // Client-side navigation helper with browser history support
   const navigate = (path) => {
@@ -30,7 +43,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Check authentication status on startup using the lightweight endpoint
+  // Check authentication status on startup using lightweight endpoint
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -55,39 +68,37 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
-  // Initial loader
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout error', err);
+    } finally {
+      setIsAuthenticated(false);
+      navigate('/');
+    }
+  };
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="animate-spin text-brand w-8 h-8" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // 1. Standalone Page: Privacy Policy (/privacy)
   if (currentPath === '/privacy') {
-    return <Privacy onGoHome={() => navigate('/')} />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Privacy onGoHome={() => navigate('/')} />
+      </Suspense>
+    );
   }
 
   // 2. Standalone Page: Login / Auth (/login)
   if (currentPath === '/login' && !isAuthenticated) {
     return (
-      <Auth
-        onLoginSuccess={() => {
-          setIsAuthenticated(true);
-          navigate('/app');
-        }}
-        onBack={() => navigate('/')}
-      />
-    );
-  }
-
-  // 3. Standalone Page: App Dashboard (/app or /dashboard)
-  // Dedicated home page for registered users. Has its OWN navbar (NO download button here).
-  if (currentPath === '/app' || currentPath === '/dashboard') {
-    if (!isAuthenticated) {
-      // If not logged in, prompt to log in, then proceed to /app
-      return (
+      <Suspense fallback={<PageLoader />}>
         <Auth
           onLoginSuccess={() => {
             setIsAuthenticated(true);
@@ -95,88 +106,61 @@ export default function App() {
           }}
           onBack={() => navigate('/')}
         />
+      </Suspense>
+    );
+  }
+
+  // 3. Standalone Page: App Dashboard (/app or /dashboard)
+  if (currentPath === '/app' || currentPath === '/dashboard') {
+    if (!isAuthenticated) {
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <Auth
+            onLoginSuccess={() => {
+              setIsAuthenticated(true);
+              navigate('/app');
+            }}
+            onBack={() => navigate('/')}
+          />
+        </Suspense>
       );
     }
 
     return (
       <div className="min-h-screen bg-gray-50 text-ink flex flex-col font-sans">
-        {/* App Dashboard Navbar: Clean Airbnb styling, NO download button */}
-        <nav className="bg-white sticky top-0 z-50 border-b border-divider">
-          <div className="max-w-6xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between gap-4">
-            <div
-              className="flex items-center gap-2.5 cursor-pointer group"
-              onClick={() => navigate('/')}
-              title="Return to Landing Page"
-            >
-              <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center text-white shadow-sm shadow-brand/20 group-hover:scale-105 transition-transform">
-                <Brain className="w-5 h-5" />
-              </div>
-              <span className="font-extrabold text-2xl tracking-tighter text-brand">
-                Ormayundo.
-              </span>
-            </div>
+        <DashboardNavbar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onNavigateHome={() => navigate('/')}
+          onLogout={handleLogout}
+        />
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer ${
-                  activeTab === 'dashboard'
-                    ? 'bg-ink text-white shadow-sm'
-                    : 'text-muted hover:text-ink hover:bg-surface'
-                }`}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Analytics</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('manage')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer ${
-                  activeTab === 'manage'
-                    ? 'bg-ink text-white shadow-sm'
-                    : 'text-muted hover:text-ink hover:bg-surface'
-                }`}
-              >
-                <Library className="w-3.5 h-3.5" />
-                <span>Manage Cards</span>
-              </button>
-
-              <div className="w-px h-6 bg-divider mx-2" />
-
-              <button
-                onClick={async () => {
-                  await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
-                  setIsAuthenticated(false);
-                  navigate('/');
-                }}
-                className="text-xs font-bold text-muted hover:text-brand transition-colors px-2 cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Dashboard Content: Analytics or Flashcard Manager */}
         <main className="flex-1 animate-fade-in pb-12">
-          {activeTab === 'dashboard' ? <AnalyticsDashboard /> : <FlashcardManager />}
+          <Suspense fallback={<PageLoader />}>
+            {activeTab === 'dashboard' ? (
+              <AnalyticsDashboard />
+            ) : (
+              <FlashcardManager />
+            )}
+          </Suspense>
         </main>
       </div>
     );
   }
 
   // 4. Standalone Page: Landing Page (/)
-  // Completely separate page with its OWN navbar, hero, and Extension Download buttons.
   return (
-    <LandingPage
-      onGetStarted={() => {
-        if (isAuthenticated) {
-          navigate('/app');
-        } else {
-          navigate('/login');
-        }
-      }}
-      isAuthenticated={isAuthenticated}
-    />
+    <Suspense fallback={<PageLoader />}>
+      <LandingPage
+        onGetStarted={() => {
+          if (isAuthenticated) {
+            navigate('/app');
+          } else {
+            navigate('/login');
+          }
+        }}
+        isAuthenticated={isAuthenticated}
+      />
+    </Suspense>
   );
 }

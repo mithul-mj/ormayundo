@@ -1,0 +1,13 @@
+export { default as Navbar } from './Navbar';
+export { default as HeroSection } from './HeroSection';
+export { default as ExtensionShowcase } from './ExtensionShowcase';
+export { default as AnalyticsShowcase } from './AnalyticsShowcase';
+export { default as DeckShowcase } from './DeckShowcase';
+export { default as HowItWorks } from './HowItWorks';
+export { default as DownloadSection } from './DownloadSection';
+export { default as ScienceSection } from './ScienceSection';
+export { default as FeaturesGrid } from './FeaturesGrid';
+export { default as CtaBanner } from './CtaBanner';
+export { default as Footer } from './Footer';
+export { default as ImageModal } from './ImageModal';
+
