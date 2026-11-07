@@ -94,11 +94,14 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
       {/* 2. Hero Section (Airbnb Editorial Style) */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-24 overflow-hidden bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 text-center">
-          {/* Subtle Tag */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F7F7F7] border border-[#EBEBEB] text-[#222222] text-xs font-semibold mb-6">
-            <span className="w-2 h-2 rounded-full bg-[#FF385C] animate-pulse" />
-            <span>AI Active Recall • SuperMemo SM-2 Engine</span>
-            <span className="text-[#717171]">• 100% Free Unpacked Extension</span>
+          {/* Editorial Eyebrow (Clean text, no pill box) */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-xs sm:text-sm font-medium text-[#717171] mb-5 tracking-wide">
+            <span className="w-2 h-2 rounded-full bg-[#FF385C] animate-pulse inline-block" />
+            <span className="text-[#222222] font-bold">AI Active Recall</span>
+            <span className="text-[#DDDDDD]">•</span>
+            <span>SuperMemo SM-2 Engine</span>
+            <span className="text-[#DDDDDD]">•</span>
+            <span className="text-[#008A05] font-semibold">100% Free Unpacked Extension</span>
           </div>
 
           {/* Headline */}
