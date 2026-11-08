@@ -137,8 +137,28 @@ export default function App() {
     );
   }
 
-  // 3. Standalone Page: App Dashboard (/app, /dashboard, or /admin)
-  if (currentPath === '/app' || currentPath === '/dashboard' || currentPath === '/admin') {
+  // 3. Standalone Page: Dedicated Administrator Portal (/admin)
+  if (currentPath === '/admin') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AdminPortal
+          user={user}
+          onLoginSuccess={(adminUser) => {
+            setUser(adminUser);
+            setIsAuthenticated(true);
+          }}
+          onLogout={() => {
+            setUser(null);
+            setIsAuthenticated(false);
+          }}
+          onNavigateHome={() => navigate('/')}
+        />
+      </Suspense>
+    );
+  }
+
+  // 4. Standalone Page: App Dashboard (/app or /dashboard)
+  if (currentPath === '/app' || currentPath === '/dashboard') {
     if (!isAuthenticated) {
       return (
         <Suspense fallback={<PageLoader />}>
@@ -151,7 +171,7 @@ export default function App() {
                 console.error('Failed to load user profile on login:', err);
               }
               setIsAuthenticated(true);
-              navigate(currentPath === '/admin' ? '/admin' : '/app');
+              navigate('/app');
             }}
             onBack={() => navigate('/')}
           />
@@ -163,7 +183,13 @@ export default function App() {
       <div className="min-h-screen bg-gray-50 text-ink flex flex-col font-sans">
         <DashboardNavbar
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={(tab) => {
+            if (tab === 'admin') {
+              navigate('/admin');
+            } else {
+              setActiveTab(tab);
+            }
+          }}
           onNavigateHome={() => navigate('/')}
           onLogout={handleLogout}
           user={user}
@@ -182,8 +208,6 @@ export default function App() {
               <AnalyticsDashboard />
             ) : activeTab === 'manage' ? (
               <FlashcardManager />
-            ) : activeTab === 'admin' && user?.role === 'admin' ? (
-              <AdminPortal />
             ) : (
               <AnalyticsDashboard />
             )}

@@ -10,6 +10,9 @@ import {
   Server,
   RefreshCw,
   AlertOctagon,
+  LogOut,
+  ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import { API_URL } from '../../shared/config';
 import AdminOverviewTab from './AdminOverviewTab';
@@ -18,10 +21,18 @@ import AdminCardsTab from './AdminCardsTab';
 import AdminTokensTab from './AdminTokensTab';
 import AdminGuardrailsTab from './AdminGuardrailsTab';
 import AdminSystemTab from './AdminSystemTab';
+import AdminLogin from './AdminLogin';
 
-export default function AdminPortal() {
+export default function AdminPortal({
+  user: initialUser = null,
+  onLoginSuccess,
+  onLogout,
+  onNavigateHome,
+}) {
+  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [verifyingAuth, setVerifyingAuth] = useState(!initialUser);
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Data states
@@ -153,11 +164,51 @@ export default function AdminPortal() {
     }
   }, [fetchOverview, fetchTokens, fetchConfig, fetchUsers, fetchCards, fetchIncidents]);
 
-  // Initial load on mount
+  // Verify administrator session if initialUser is missing or not admin
   useEffect(() => {
+    let ignore = false;
+    async function checkAdminAuth() {
+      if (initialUser && initialUser.role === 'admin') {
+        setCurrentUser(initialUser);
+        setVerifyingAuth(false);
+        return;
+      }
+      try {
+        const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
+        if (!ignore) {
+          if (res.data?.role === 'admin') {
+            setCurrentUser(res.data);
+          } else {
+            setCurrentUser(null);
+          }
+        }
+      } catch {
+        if (!ignore) {
+          setCurrentUser(null);
+        }
+      } finally {
+        if (!ignore) {
+          setVerifyingAuth(false);
+        }
+      }
+    }
+
+    checkAdminAuth();
+    return () => {
+      ignore = true;
+    };
+  }, [initialUser]);
+
+  // Initial load on mount or when currentUser becomes an admin
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return;
+    }
     let ignore = false;
 
     async function init() {
+      setLoading(true);
+      setError(null);
       try {
         const [statsRes, healthRes, tokensRes, configRes, usersRes, cardsRes, incidentsRes] =
           await Promise.all([
@@ -186,9 +237,13 @@ export default function AdminPortal() {
         }
       } catch (err) {
         if (!ignore) {
-          setError(
-            err.response?.data?.message || 'Access denied or failed to load administrative data.'
-          );
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            setCurrentUser(null);
+          } else {
+            setError(
+              err.response?.data?.message || 'Access denied or failed to load administrative data.'
+            );
+          }
           setLoading(false);
         }
       }
@@ -199,7 +254,7 @@ export default function AdminPortal() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [currentUser]);
 
   // Update user list when filters change
   useEffect(() => {
@@ -331,6 +386,41 @@ export default function AdminPortal() {
     await Promise.all([fetchIncidents(), fetchOverview()]);
   };
 
+  const handleAdminLogout = async () => {
+    try {
+      await axios.post(`${API_URL}/auth/logout`, {}, { withCredentials: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setCurrentUser(null);
+      setStats(null);
+      if (onLogout) onLogout();
+    }
+  };
+
+  if (verifyingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+        <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-3" />
+        <span className="text-xs font-semibold text-slate-400">
+          Checking administrator authorization...
+        </span>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== 'admin') {
+    return (
+      <AdminLogin
+        onLoginSuccess={(adminData) => {
+          setCurrentUser(adminData);
+          if (onLoginSuccess) onLoginSuccess(adminData);
+        }}
+        onBack={onNavigateHome}
+      />
+    );
+  }
+
   if (loading && !stats) {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-16 flex flex-col items-center justify-center">
@@ -350,12 +440,20 @@ export default function AdminPortal() {
         </div>
         <h2 className="text-xl font-bold text-ink mb-2">Administrator Access Required</h2>
         <p className="text-xs text-muted mb-6">{error}</p>
-        <button
-          onClick={loadAllData}
-          className="px-4 py-2 rounded-xl bg-brand text-white font-bold text-xs hover:bg-brand-hover transition-colors cursor-pointer"
-        >
-          Retry Connection
-        </button>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={loadAllData}
+            className="px-4 py-2 rounded-xl bg-brand text-white font-bold text-xs hover:bg-brand-hover transition-colors cursor-pointer"
+          >
+            Retry Connection
+          </button>
+          <button
+            onClick={() => setCurrentUser(null)}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            Re-authenticate
+          </button>
+        </div>
       </div>
     );
   }
@@ -380,15 +478,44 @@ export default function AdminPortal() {
           </p>
         </div>
 
-        {/* Global Refresh Button */}
-        <button
-          onClick={loadAllData}
-          disabled={loading}
-          className="self-start sm:self-auto flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-surface border border-divider text-ink font-bold text-xs transition-colors shadow-xs cursor-pointer"
-        >
-          <RefreshCw className={['w-3.5 h-3.5 text-muted', loading ? 'animate-spin' : ''].join(' ')} />
-          <span>Refresh All</span>
-        </button>
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onNavigateHome && (
+            <button
+              onClick={onNavigateHome}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-surface border border-divider text-ink font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              title="Return to Main Application"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-muted" />
+              <span>App</span>
+            </button>
+          )}
+
+          <button
+            onClick={loadAllData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-surface border border-divider text-ink font-bold text-xs transition-colors shadow-xs cursor-pointer"
+          >
+            <RefreshCw className={['w-3.5 h-3.5 text-muted', loading ? 'animate-spin' : ''].join(' ')} />
+            <span>Refresh All</span>
+          </button>
+
+          <div className="h-6 w-px bg-divider hidden sm:block mx-1" />
+
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-800 text-xs font-semibold border border-purple-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+            <span className="truncate max-w-[140px]">{currentUser?.email}</span>
+          </div>
+
+          <button
+            onClick={handleAdminLogout}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs transition-colors shadow-xs cursor-pointer"
+            title="Log out of Administrator Session"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Feature Tab Navigation */}

@@ -73,6 +73,68 @@ export const googleAuth = async (req, res) => {
   }
 };
 
+// Authenticate Administrator via Email & Password (no Google OAuth required)
+export const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({
+      message: 'Email and password are required'
+    });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+
+  try {
+    const user = await User.findOne({ email: cleanEmail }).select('+password');
+
+    if (!user) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        message: 'Invalid administrator credentials'
+      });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        message: 'Access restricted: This account does not have administrator privileges'
+      });
+    }
+
+    if (user.isBlocked) {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        message: user.blockedReason
+          ? `Account suspended: ${user.blockedReason}`
+          : 'Administrator account suspended'
+      });
+    }
+
+    if (!user.password) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        message: 'No password configured for this administrator. Please run the seed script.'
+      });
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        message: 'Invalid administrator credentials'
+      });
+    }
+
+    generateTokens(res, user._id, user.tokenVersion || 0);
+
+    res.status(STATUS_CODES.OK).json({
+      _id: user._id,
+      email: user.email,
+      role: 'admin',
+      message: 'Administrator login successful'
+    });
+  } catch (error) {
+    console.error('Admin Login Error:', error);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });
+  }
+};
+
 // Log out user and clear auth cookies
 export const logoutUser = async (req, res) => {
   res.cookie(AUTH_COOKIES.ACCESS_TOKEN, '', {
