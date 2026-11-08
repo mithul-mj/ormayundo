@@ -3,14 +3,16 @@ import {
   Activity,
   Send,
   RotateCcw,
-  Cpu,
   Smartphone,
   HardDrive,
   CheckCircle,
   AlertTriangle,
   Check,
+  Server,
+  Radio,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { UI_TIMERS, TIME_CONSTANTS } from '../../shared/constants';
 
 export default function AdminSystemTab({
   systemHealth,
@@ -34,7 +36,7 @@ export default function AdminSystemTab({
         icon: 'success',
         title: 'Jobs Re-queued',
         text: res?.data?.message || 'Failed BullMQ jobs have been queued for retry.',
-        timer: 2000,
+        timer: UI_TIMERS.ALERT_MEDIUM_MS,
         showConfirmButton: false,
       });
       onRefresh();
@@ -52,7 +54,7 @@ export default function AdminSystemTab({
       Swal.fire({
         icon: 'success',
         title: 'Incident Resolved',
-        timer: 1500,
+        timer: UI_TIMERS.ALERT_SHORT_MS,
         showConfirmButton: false,
       });
       onRefresh();
@@ -71,11 +73,11 @@ export default function AdminSystemTab({
     }
 
     const result = await Swal.fire({
-      title: 'Dispatch Push Notification Broadcast?',
+      title: 'Dispatch Push Broadcast?',
       text: 'This notification will be delivered immediately to all registered user devices and Chrome extensions.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#FF9532',
+      confirmButtonColor: '#FF385C',
       confirmButtonText: 'Yes, Send Now',
     });
 
@@ -106,112 +108,180 @@ export default function AdminSystemTab({
 
   const memory = systemHealth?.memory || { rssMb: 0, heapUsedMb: 0, heapTotalMb: 0 };
   const queue = systemHealth?.queue || {};
-  const uptimeMinutes = systemHealth?.uptimeSeconds ? Math.floor(systemHealth.uptimeSeconds / 60) : 0;
-  const uptimeHours = Math.floor(uptimeMinutes / 60);
+  const uptimeMinutes = systemHealth?.uptimeSeconds
+    ? Math.floor(systemHealth.uptimeSeconds / TIME_CONSTANTS.SECONDS_IN_MINUTE)
+    : 0;
+  const uptimeHours = Math.floor(uptimeMinutes / TIME_CONSTANTS.MINUTES_IN_HOUR);
 
   const unresolvedIncidents = incidents.filter((i) => i.status === 'unresolved');
 
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Real-time System Incidents & Failure Alert Center */}
-      <div className="bg-white p-6 rounded-2xl border border-divider shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <h3 className="font-bold text-base text-ink">Real-time Failure Incidents & Alerts</h3>
-            {unresolvedIncidents.length > 0 ? (
-              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold animate-pulse">
-                {unresolvedIncidents.length} Active Incident{unresolvedIncidents.length > 1 ? 's' : ''}
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
-                All Systems Healthy
-              </span>
-            )}
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg text-ink">Failure Incidents & Alerts</h3>
+                {unresolvedIncidents.length > 0 ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200 animate-pulse">
+                    {unresolvedIncidents.length} Active
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+                    All Healthy
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted mt-0.5">
+                Real-time tracking of AI worker timeouts, rate limits, and system health exceptions.
+              </p>
+            </div>
           </div>
           <button
             onClick={onRefresh}
-            className="text-xs text-brand font-semibold hover:underline cursor-pointer"
+            className="self-start sm:self-auto px-4 py-2 rounded-full border border-divider hover:border-ink text-xs font-semibold text-ink transition-colors cursor-pointer bg-white"
           >
             Refresh Alerts
           </button>
         </div>
 
-        <p className="text-xs text-muted mb-4">
-          Captures AI worker failures, Groq quota limits, and server errors in real-time. Alerts are instantly pushed to admin devices.
-        </p>
-
         {incidents.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface/80 border-b border-divider text-muted uppercase font-bold text-[10px]">
-                <tr>
-                  <th className="py-2.5 px-3">Severity</th>
-                  <th className="py-2.5 px-3">Type</th>
-                  <th className="py-2.5 px-3">Message</th>
-                  <th className="py-2.5 px-3">User</th>
-                  <th className="py-2.5 px-3">Time</th>
-                  <th className="py-2.5 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider/60">
-                {incidents.map((inc) => (
-                  <tr
-                    key={inc._id}
-                    className={[
-                      'hover:bg-surface/40 transition-colors',
-                      inc.status === 'unresolved' ? 'bg-red-50/15' : '',
-                    ].join(' ')}
-                  >
-                    <td className="py-2.5 px-3">
-                      <span
-                        className={[
-                          'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase',
-                          inc.severity === 'critical'
-                            ? 'bg-red-100 text-red-700'
-                            : inc.severity === 'high'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-blue-100 text-blue-700',
-                        ].join(' ')}
-                      >
-                        {inc.severity}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-semibold text-ink">
-                      {inc.type.replace(/_/g, ' ')}
-                    </td>
-                    <td className="py-2.5 px-3 text-muted max-w-xs truncate" title={inc.message}>
-                      {inc.message}
-                    </td>
-                    <td className="py-2.5 px-3 text-ink font-medium max-w-[120px] truncate" title={inc.userEmail}>
-                      {inc.userEmail}
-                    </td>
-                    <td className="py-2.5 px-3 text-muted text-[11px]">
-                      {new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      {inc.status === 'unresolved' ? (
-                        <button
-                          onClick={() => handleResolve(inc._id)}
-                          disabled={resolvingId === inc._id}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] border border-emerald-200 transition-colors cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <Check className="w-3 h-3" />
-                          <span>Resolve</span>
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-muted font-medium">Resolved</span>
-                      )}
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-surface/80 border-b border-divider text-muted uppercase font-bold text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4 rounded-l-xl">Severity</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Message</th>
+                    <th className="py-3 px-4">User</th>
+                    <th className="py-3 px-4">Time</th>
+                    <th className="py-3 px-4 text-right rounded-r-xl">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-divider/60">
+                  {incidents.map((inc) => (
+                    <tr
+                      key={inc._id}
+                      className={[
+                        'hover:bg-surface/50 transition-colors',
+                        inc.status === 'unresolved' ? 'bg-red-50/20' : '',
+                      ].join(' ')}
+                    >
+                      <td className="py-3 px-4">
+                        <span
+                          className={[
+                            'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase',
+                            inc.severity === 'critical'
+                              ? 'bg-red-100 text-red-700'
+                              : inc.severity === 'high'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-700',
+                          ].join(' ')}
+                        >
+                          {inc.severity}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-ink">
+                        {inc.type.replace(/_/g, ' ')}
+                      </td>
+                      <td className="py-3 px-4 text-muted max-w-xs truncate" title={inc.message}>
+                        {inc.message}
+                      </td>
+                      <td className="py-3 px-4 text-ink font-medium max-w-[140px] truncate" title={inc.userEmail}>
+                        {inc.userEmail}
+                      </td>
+                      <td className="py-3 px-4 text-muted text-[11px]">
+                        {new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {inc.status === 'unresolved' ? (
+                          <button
+                            onClick={() => handleResolve(inc._id)}
+                            disabled={resolvingId === inc._id}
+                            className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] border border-emerald-200 transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Resolve</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-muted font-medium">Resolved</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View (< 768px) */}
+            <div className="md:hidden space-y-3">
+              {incidents.map((inc) => (
+                <div
+                  key={inc._id}
+                  className={[
+                    'p-4 rounded-2xl border border-divider transition-all space-y-3',
+                    inc.status === 'unresolved' ? 'bg-red-50/15 border-red-100' : 'bg-surface/40',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={[
+                        'px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase',
+                        inc.severity === 'critical'
+                          ? 'bg-red-100 text-red-700'
+                          : inc.severity === 'high'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-700',
+                      ].join(' ')}
+                    >
+                      {inc.severity}
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      {new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-bold text-ink block mb-0.5">
+                      {inc.type.replace(/_/g, ' ')}
+                    </span>
+                    <p className="text-xs text-muted leading-relaxed line-clamp-2">
+                      {inc.message}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-divider/60 text-xs">
+                    <span className="text-muted font-medium truncate max-w-[180px]">
+                      {inc.userEmail}
+                    </span>
+                    {inc.status === 'unresolved' ? (
+                      <button
+                        onClick={() => handleResolve(inc._id)}
+                        disabled={resolvingId === inc._id}
+                        className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] border border-emerald-200 transition-colors cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Resolve</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted font-medium">Resolved</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
-          <div className="p-6 rounded-xl bg-surface/60 border border-divider/60 text-center text-xs text-muted">
-            <CheckCircle className="w-5 h-5 text-emerald-600 mx-auto mb-1.5" />
-            <span>No failure incidents recorded. Everything is operating smoothly.</span>
+          <div className="p-8 rounded-2xl bg-surface/50 border border-divider text-center text-xs text-muted">
+            <CheckCircle className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
+            <span className="font-medium">No failure incidents recorded. All systems operating with zero alerts.</span>
           </div>
         )}
       </div>
@@ -219,54 +289,61 @@ export default function AdminSystemTab({
       {/* 2-Column Grid: Queue & Push Broadcast */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* BullMQ Worker & Queue Controls */}
-        <div className="bg-white p-6 rounded-2xl border border-divider shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-brand" />
-                <h3 className="font-bold text-base text-ink">BullMQ AI Queue & Workers</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-ink">BullMQ AI Queue</h3>
+                  <p className="text-xs text-muted">Background workers on Redis Cloud</p>
+                </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
+              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Online
               </span>
             </div>
+
             <p className="text-xs text-muted mb-6">
-              Background job processing engine connected via Redis Cloud. Handles Groq AI prompt generation asynchronously.
+              Manages asynchronous Groq AI card generation and SM-2 spaced repetition calculation queues.
             </p>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-surface p-3 rounded-xl border border-divider/60">
-                <span className="text-xs text-muted block">Jobs Waiting</span>
-                <span className="text-xl font-bold text-ink">{queue.waiting || 0}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 mb-4 border-y border-divider/60">
+              <div>
+                <span className="text-xs text-muted font-medium block">Waiting</span>
+                <span className="text-2xl font-black text-ink mt-0.5 block">{queue.waiting || 0}</span>
               </div>
-              <div className="bg-surface p-3 rounded-xl border border-divider/60">
-                <span className="text-xs text-muted block">Jobs Active</span>
-                <span className="text-xl font-bold text-blue-600">{queue.active || 0}</span>
+              <div>
+                <span className="text-xs text-muted font-medium block">Active</span>
+                <span className="text-2xl font-black text-blue-600 mt-0.5 block">{queue.active || 0}</span>
               </div>
-              <div className="bg-surface p-3 rounded-xl border border-divider/60">
-                <span className="text-xs text-muted block">Jobs Completed</span>
-                <span className="text-xl font-bold text-emerald-600">{queue.completed || 0}</span>
+              <div>
+                <span className="text-xs text-muted font-medium block">Completed</span>
+                <span className="text-2xl font-black text-emerald-600 mt-0.5 block">{queue.completed || 0}</span>
               </div>
-              <div className="bg-surface p-3 rounded-xl border border-divider/60">
-                <span className="text-xs text-muted block">Jobs Failed</span>
-                <span className={['text-xl font-bold', queue.failed > 0 ? 'text-red-600' : 'text-muted'].join(' ')}>
+              <div>
+                <span className="text-xs text-muted font-medium block">Failed</span>
+                <span className={['text-2xl font-black mt-0.5 block', queue.failed > 0 ? 'text-red-600' : 'text-muted'].join(' ')}>
                   {queue.failed || 0}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-divider pt-4 flex items-center justify-between">
+          <div className="border-t border-divider pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <span className="text-xs text-muted">
-              {queue.failed > 0 ? `${queue.failed} failed jobs waiting for recovery` : 'Queue is operating normally'}
+              {queue.failed > 0 ? `${queue.failed} failed jobs awaiting recovery` : 'Queue is operating smoothly'}
             </span>
             <button
               onClick={handleRetryJobs}
               disabled={retryingJobs || !queue.failed}
               className={[
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer',
+                'flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer',
                 queue.failed > 0
-                  ? 'bg-ink text-white hover:bg-black shadow-xs'
+                  ? 'bg-ink text-white hover:bg-black shadow-[0_4px_14px_rgba(0,0,0,0.15)]'
                   : 'bg-surface text-muted border border-divider cursor-not-allowed opacity-60',
               ].join(' ')}
             >
@@ -277,49 +354,54 @@ export default function AdminSystemTab({
         </div>
 
         {/* Firebase FCM Broadcast Notification Center */}
-        <div className="bg-white p-6 rounded-2xl border border-divider shadow-xs">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Send className="w-5 h-5 text-brand" />
-              <h3 className="font-bold text-base text-ink">Broadcast Push Notification</h3>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand">
+                <Radio className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-ink">Broadcast Push</h3>
+                <p className="text-xs text-muted">Firebase Cloud Messaging</p>
+              </div>
             </div>
-            <span className="text-xs font-semibold text-muted flex items-center gap-1">
-              <Smartphone className="w-3.5 h-3.5" />
-              {systemHealth?.notifications?.totalRegisteredDevices || 0} Devices Registered
+            <span className="px-3 py-1 rounded-full bg-surface border border-divider text-xs font-semibold text-muted flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-brand" />
+              {systemHealth?.notifications?.totalRegisteredDevices || 0} Devices
             </span>
           </div>
 
           <p className="text-xs text-muted mb-4">
-            Dispatch announcements directly to users' Chrome extensions and web browsers via Firebase Cloud Messaging.
+            Instantly dispatch push announcements to all active Chrome extensions and enrolled web sessions.
           </p>
 
           <form onSubmit={handleSendBroadcast} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-ink mb-1">Notification Title</label>
+              <label className="block text-xs font-bold text-ink mb-1.5">Notification Title</label>
               <input
                 type="text"
                 placeholder="e.g. New feature: Deck sharing is here!"
                 value={broadcastTitle}
                 onChange={(e) => setBroadcastTitle(e.target.value)}
-                className="w-full px-3.5 py-2 bg-surface text-ink text-xs rounded-xl border border-divider focus:outline-none focus:border-brand"
+                className="w-full px-4 py-2.5 bg-surface text-ink text-xs rounded-2xl border border-divider focus:outline-none focus:border-brand focus:bg-white transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-ink mb-1">Notification Body</label>
+              <label className="block text-xs font-bold text-ink mb-1.5">Notification Body</label>
               <textarea
                 rows={3}
-                placeholder="Enter announcement text to display on user notifications..."
+                placeholder="Enter announcement text to display on user screens..."
                 value={broadcastBody}
                 onChange={(e) => setBroadcastBody(e.target.value)}
-                className="w-full px-3.5 py-2 bg-surface text-ink text-xs rounded-xl border border-divider focus:outline-none focus:border-brand resize-none"
+                className="w-full px-4 py-2.5 bg-surface text-ink text-xs rounded-2xl border border-divider focus:outline-none focus:border-brand focus:bg-white transition-all resize-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={sendingBroadcast}
-              className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer disabled:opacity-60"
+              className="w-full py-3 px-5 rounded-full bg-brand hover:bg-brand-hover text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_rgba(255,56,92,0.25)] cursor-pointer disabled:opacity-60"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{sendingBroadcast ? 'Dispatching...' : 'Dispatch Notification Broadcast'}</span>
@@ -329,37 +411,44 @@ export default function AdminSystemTab({
       </div>
 
       {/* Infrastructure & Runtime Diagnostics */}
-      <div className="bg-white p-6 rounded-2xl border border-divider shadow-xs">
-        <h3 className="font-bold text-sm text-ink mb-4 flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-brand" />
-          Server Environment & Runtime Health
-        </h3>
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-2xl bg-surface border border-divider flex items-center justify-center text-ink">
+            <Server className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-ink">Runtime & Environment Health</h3>
+            <p className="text-xs text-muted">Node.js server cluster and persistent connections</p>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-surface border border-divider/60">
-            <span className="text-xs text-muted block mb-1">Node.js Uptime</span>
-            <div className="text-xl font-bold text-ink">
-              {uptimeHours > 0 ? `${uptimeHours}h ${uptimeMinutes % 60}m` : `${uptimeMinutes}m`}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+          <div className="sm:border-r sm:border-divider/60 sm:pr-6">
+            <span className="text-xs text-muted font-medium block mb-1">Server Process Uptime</span>
+            <div className="text-2xl font-black text-ink">
+              {uptimeHours > 0
+                ? `${uptimeHours}h ${uptimeMinutes % TIME_CONSTANTS.MINUTES_IN_HOUR}m`
+                : `${uptimeMinutes}m`}
             </div>
-            <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
-              <CheckCircle className="w-3 h-3" /> Continuous Process
+            <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-1.5">
+              <CheckCircle className="w-3.5 h-3.5" /> Continuous Process
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-surface border border-divider/60">
-            <span className="text-xs text-muted block mb-1">Memory (Heap Used)</span>
-            <div className="text-xl font-bold text-ink">{memory.heapUsedMb} MB</div>
-            <span className="text-[11px] text-muted block mt-1">
-              Heap Total: {memory.heapTotalMb} MB (RSS: {memory.rssMb} MB)
+          <div className="sm:border-r sm:border-divider/60 sm:pr-6">
+            <span className="text-xs text-muted font-medium block mb-1">Memory Allocation</span>
+            <div className="text-2xl font-black text-ink">{memory.heapUsedMb} MB</div>
+            <span className="text-[11px] text-muted block mt-1.5">
+              Heap Total: {memory.heapTotalMb} MB · RSS: {memory.rssMb} MB
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-surface border border-divider/60">
-            <span className="text-xs text-muted block mb-1">Database & Redis</span>
-            <div className="text-xl font-bold text-emerald-600 flex items-center gap-1.5">
+          <div>
+            <span className="text-xs text-muted font-medium block mb-1">Database & Redis</span>
+            <div className="text-2xl font-black text-emerald-600 flex items-center gap-2">
               <HardDrive className="w-5 h-5" /> Connected
             </div>
-            <span className="text-[11px] text-muted block mt-1">
+            <span className="text-[11px] text-muted block mt-1.5">
               MongoDB Atlas Pool + Redis Cloud
             </span>
           </div>

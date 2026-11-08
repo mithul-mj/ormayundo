@@ -18,30 +18,19 @@ export default function AnalyticsSummaryHeader({
 
       <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
         {/* Streak Card */}
-        <div className={
-      [
-        'bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex',
-        'items-center gap-5 hover:shadow-md transition-shadow relative',
-        'overflow-hidden'
-      ].join(' ')
-    }>
+        <div className="bg-white px-6 py-4 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-divider/30 flex items-center gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all relative overflow-hidden">
           <div className="text-brand-light">
             <Flame className="w-8 h-8 fill-brand-light/20" />
           </div>
           <div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">
+            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">
               Creation Streak
             </p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-gray-900 tracking-tighter">
+              <p className="text-3xl font-black text-ink tracking-tighter">
                 {additionStreak || 0}
               </p>
-              <span className={
-      [
-        'text-xs font-bold text-brand-light bg-brand-light/10 border',
-        'border-brand-light/20 px-2 py-0.5 rounded-full shadow-sm'
-      ].join(' ')
-    }>
+              <span className="text-xs font-bold text-brand-light bg-brand-light/10 border border-brand-light/20 px-2 py-0.5 rounded-full shadow-xs">
                 Max {maxStreak || 0}
               </span>
             </div>
@@ -49,13 +38,7 @@ export default function AnalyticsSummaryHeader({
         </div>
 
         {/* Retention Card */}
-        <div className={
-      [
-        'bg-white px-6 py-4 rounded-3xl shadow-sm border border-gray-100 flex',
-        'items-center gap-5 hover:shadow-md transition-shadow relative',
-        'overflow-hidden'
-      ].join(' ')
-    }>
+        <div className="bg-white px-6 py-4 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-divider/30 flex items-center gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all relative overflow-hidden">
           <div className="flex items-center justify-center">
             <svg
               width="48"

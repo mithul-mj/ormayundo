@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 import SystemConfig from '../models/systemConfig.js';
 import { FLASHCARD_GENERATION_PROMPT } from '../utils/prompts.js';
+import { SYSTEM_CONFIG_DEFAULTS, AI_CONSTANTS } from '../utils/constants.js';
 
 const groq = new Groq({
   apiKey: process.env.AI_API_KEY
@@ -9,9 +10,10 @@ const groq = new Groq({
 export const generateRecallQuestion = async (selectedText, userDecks = ['General'], sourceUrl = '') => {
   const decksList = Array.isArray(userDecks) && userDecks.length > 0 ? userDecks.join(', ') : 'General';
   
-  // Smart input safeguard: clamp excessively long selections to 4000 chars to save tokens
-  const clampedText = selectedText.length > 4000 
-    ? `${selectedText.slice(0, 2500)}\n\n[...]\n\n${selectedText.slice(-1500)}` 
+  // Smart input safeguard: clamp excessively long selections to configured max text length
+  const maxAllowedLength = SYSTEM_CONFIG_DEFAULTS.MAX_TEXT_LENGTH;
+  const clampedText = selectedText.length > maxAllowedLength 
+    ? `${selectedText.slice(0, AI_CONSTANTS.TEXT_CLAMP_HEAD_CHARS)}\n\n[...]\n\n${selectedText.slice(-AI_CONSTANTS.TEXT_CLAMP_TAIL_CHARS)}` 
     : selectedText;
 
   const prompt = FLASHCARD_GENERATION_PROMPT
@@ -20,28 +22,28 @@ export const generateRecallQuestion = async (selectedText, userDecks = ['General
     .replace('{{URL}}', sourceUrl);
 
   const config = await SystemConfig.getSettings();
-  const primaryModel = config.aiModel || 'openai/gpt-oss-120b';
-  const fallbackModel = config.aiFallbackModel || 'llama-3.3-70b-versatile';
+  const primaryModel = config.aiModel || SYSTEM_CONFIG_DEFAULTS.AI_MODEL;
+  const fallbackModel = config.aiFallbackModel || SYSTEM_CONFIG_DEFAULTS.AI_FALLBACK_MODEL;
   const modelsToTry = [primaryModel];
   if (fallbackModel && fallbackModel !== primaryModel) {
     modelsToTry.push(fallbackModel);
   }
-  const temperature = config.aiTemperature ?? 1;
-  const maxCompletionTokens = config.aiMaxTokens ?? 2048;
+  const temperature = config.aiTemperature ?? SYSTEM_CONFIG_DEFAULTS.AI_TEMPERATURE;
+  const maxCompletionTokens = config.aiMaxTokens ?? SYSTEM_CONFIG_DEFAULTS.AI_MAX_TOKENS;
 
   for (const model of modelsToTry) {
     try {
       console.log(`[AI] Sending request to Groq model: ${model} with decks: [${decksList}]...`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), AI_CONSTANTS.TIMEOUT_MS);
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
         model,
         temperature,
         max_completion_tokens: maxCompletionTokens,
-        top_p: 1,
+        top_p: AI_CONSTANTS.DEFAULT_TOP_P,
         reasoning_effort: 'medium',
         stream: false,
         response_format: { type: 'json_object' },

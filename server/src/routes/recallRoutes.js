@@ -3,13 +3,14 @@ import { createRecallItem, getDueItems, getAllItems, editRecallItem, reviewRecal
 import { protect } from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validateMiddleware.js';
 import { createRecallSchema, reviewRecallSchema } from '../utils/validators.js';
+import { recallCreationRateLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
 
 router.use(protect);
 
 router.get('/', getAllItems);
-router.post('/', validate(createRecallSchema), createRecallItem);
+router.post('/', recallCreationRateLimiter, validate(createRecallSchema), createRecallItem);
 router.get('/due', getDueItems);
 router.delete('/all', deleteAllRecallItems); // MUST BE BEFORE /:id
 router.post('/:id/review', validate(reviewRecallSchema), reviewRecallItem);

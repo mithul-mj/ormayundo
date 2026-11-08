@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { SPACED_REPETITION } from "../utils/constants.js";
 
 const recallItemSchema = new mongoose.Schema({
     userId: {
@@ -33,7 +34,7 @@ const recallItemSchema = new mongoose.Schema({
     },
     easinessFactor: {
         type: Number,
-        default: 2.5
+        default: SPACED_REPETITION.DEFAULT_EASINESS_FACTOR
     },
     interval: {
         type: Number,

@@ -64,12 +64,7 @@ export default function FeaturesGrid() {
             return (
               <div
                 key={f.title}
-                className={
-      [
-        'p-7 rounded-3xl bg-white border border-divider hover:border-border-card',
-        'transition-all space-y-3'
-      ].join(' ')
-    }
+                className="p-6 sm:p-7 rounded-3xl bg-white/80 hover:bg-white transition-all space-y-3 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
               >
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${f.color}`}>
                   <Icon className="w-5 h-5" />

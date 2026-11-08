@@ -12,8 +12,7 @@ import {
   SourcesList,
   CircadianBarChart,
 } from './components';
-
-const CONFETTI_MILESTONES = [3, 7, 14, 30, 50, 100, 365];
+import { STREAK_MILESTONES } from '../../shared/constants';
 
 const AnalyticsDashboard = () => {
   const [data, setData] = useState(null);
@@ -35,7 +34,7 @@ const AnalyticsDashboard = () => {
     let timeoutId;
     let confettiTimer;
     if (data && data.additionStreak > 0) {
-      if (CONFETTI_MILESTONES.includes(data.additionStreak)) {
+      if (STREAK_MILESTONES.includes(data.additionStreak)) {
         const lastConfetti = localStorage.getItem('lastConfettiDate');
         const today = new Date().toDateString();
         if (lastConfetti !== today) {

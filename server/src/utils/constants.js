@@ -23,6 +23,10 @@ export const SPACED_REPETITION = {
   HARD_GROWTH_FACTOR: 1.2,
   EASY_BONUS_FACTOR: 1.3,
   MASTERED_THRESHOLD_DAYS: 21,
+  FORGOT_EF_PENALTY: 0.2,
+  HARD_EF_PENALTY: 0.15,
+  EASY_EF_BONUS: 0.15,
+  GRADUATION_INTERVAL_DAYS: 4,
   RATINGS: {
     FORGOT: 'forgot',
     HARD: 'hard',
@@ -80,6 +84,54 @@ export const INCIDENT_STATUS = {
 export const DEFAULT_ADMIN_CREDENTIALS = {
   EMAIL: 'admin@ormayundo.com',
   PASSWORD: 'Admin@Ormayundo2026!'
+};
+
+// Rate Limiting Defaults (Relaxed for smooth page access & unhindered authentications)
+export const RATE_LIMITS = {
+  AUTH: {
+    WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+    MAX: 200, // Generous allowance (skips successful attempts)
+    SKIP_SUCCESSFUL: true
+  },
+  RECALL_CREATION: {
+    WINDOW_MS: 60 * 1000, // 1 minute
+    MAX: 120 // 120 generations per minute
+  },
+  PAGE_ACCESS: {
+    WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+    MAX: 3000 // 3000 requests per window for seamless page navigation & telemetry
+  }
+};
+
+// Pagination Defaults
+export const PAGINATION = {
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 20,
+  MAX_LIMIT: 100
+};
+
+// System & Infrastructure Metrics
+export const SYSTEM_METRICS = {
+  PUSH_BATCH_SIZE: 10,
+  BYTES_PER_KB: 1024,
+  BYTES_PER_MB: 1024 * 1024,
+  COST_DECIMALS: 4,
+  LOG_COST_DECIMALS: 5
+};
+
+// Time Constants
+export const TIME_CONSTANTS = {
+  SECONDS_IN_MINUTE: 60,
+  MINUTES_IN_HOUR: 60,
+  HOURS_IN_DAY: 24
+};
+
+// AI Engine Constraints & Parameters
+export const AI_CONSTANTS = {
+  TIMEOUT_MS: 30000,
+  TEXT_CLAMP_HEAD_CHARS: 2500,
+  TEXT_CLAMP_TAIL_CHARS: 1500,
+  DEFAULT_TOP_P: 1
 };
 
 // System Guardrail Defaults

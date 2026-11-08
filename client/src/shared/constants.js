@@ -31,17 +31,89 @@ export const USER_ROLES = {
   ADMIN: 'admin',
 };
 
+// User Defaults
+export const USER_DEFAULTS = {
+  DEFAULT_DAILY_LIMIT: 30,
+  DEFAULT_STREAK: 0,
+  DEFAULT_ROLE: 'user',
+};
+
 // Admin Portal Defaults
 export const ADMIN_DEFAULTS = {
   EMAIL_PLACEHOLDER: 'admin@ormayundo.com',
 };
 
+// Pagination Constants
+export const PAGINATION = {
+  DEFAULT_PAGE: 1,
+  DEFAULT_LIMIT: 15,
+  TABLE_LIMIT: 20,
+};
+
+// Guardrail Numerical Boundaries
+export const GUARDRAILS = {
+  DAILY_CARD_LIMIT: {
+    DEFAULT: 30,
+    MIN: 5,
+    MAX: 150,
+    STEP: 5,
+  },
+  TEXT_LENGTH: {
+    DEFAULT: 4000,
+    MIN: 200,
+    MAX: 20000,
+    STEP: 500,
+  },
+  TEMPERATURE: {
+    DEFAULT: 1.0,
+    MIN: 0.1,
+    MAX: 1.5,
+    STEP: 0.05,
+  },
+  MAX_TOKENS: {
+    DEFAULT: 2048,
+    MIN: 256,
+    MAX: 8192,
+    STEP: 256,
+  },
+};
+
 // Spaced Repetition Limits & Defaults
 export const SPACED_REPETITION = {
+  DEFAULT_INTERVAL: 1,
+  MIN_INTERVAL: 0,
+  GRADUATED_THRESHOLD_DAYS: 21,
   MAX_INTERVAL_DAYS: 365,
   DEFAULT_EASINESS_FACTOR: 2.5,
   MIN_EASINESS_FACTOR: 1.3,
+  MAX_EASINESS_FACTOR: 5.0,
+  EASINESS_FACTOR_STEP: 0.05,
+  EF_DISPLAY_DECIMALS: 2,
 };
+
+// Time & Duration Constants
+export const TIME_CONSTANTS = {
+  SECONDS_IN_MINUTE: 60,
+  MINUTES_IN_HOUR: 60,
+};
+
+// UI Timers for Alerts & Notifications
+export const UI_TIMERS = {
+  ALERT_INSTANT_MS: 1000,
+  ALERT_SHORT_MS: 1500,
+  ALERT_MEDIUM_MS: 2000,
+  ALERT_LONG_MS: 3000,
+};
+
+// Token Analytics Formats
+export const TOKEN_METRICS = {
+  COST_DECIMALS: 4,
+  LOG_COST_DECIMALS: 5,
+  PERCENTAGE_BASE: 100,
+};
+
+// Gamification & Streak Celebration Milestones
+export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 365];
 
 // Firebase Web Push Configuration (supports .env override)
 export const FIREBASE_CONFIG = {

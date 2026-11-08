@@ -103,10 +103,10 @@ export const calculateIntervalsForCard = (
   }
 
   // EF adjustments
-  const forgotEF = Math.max(SPACED_REPETITION.MIN_EASINESS_FACTOR, Math.round((currentEF - 0.2) * 100) / 100);
-  const hardEF = Math.max(SPACED_REPETITION.MIN_EASINESS_FACTOR, Math.round((currentEF - 0.15) * 100) / 100);
+  const forgotEF = Math.max(SPACED_REPETITION.MIN_EASINESS_FACTOR, Math.round((currentEF - SPACED_REPETITION.FORGOT_EF_PENALTY) * 100) / 100);
+  const hardEF = Math.max(SPACED_REPETITION.MIN_EASINESS_FACTOR, Math.round((currentEF - SPACED_REPETITION.HARD_EF_PENALTY) * 100) / 100);
   const goodEF = Math.round(currentEF * 100) / 100;
-  const easyEF = Math.round((currentEF + 0.15) * 100) / 100;
+  const easyEF = Math.round((currentEF + SPACED_REPETITION.EASY_EF_BONUS) * 100) / 100;
 
   return {
     forgot: {

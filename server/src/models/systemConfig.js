@@ -1,29 +1,30 @@
 import mongoose from 'mongoose';
+import { SYSTEM_CONFIG_DEFAULTS } from '../utils/constants.js';
 
 const systemConfigSchema = new mongoose.Schema({
   key: {
     type: String,
     required: true,
     unique: true,
-    default: 'global_settings'
+    default: SYSTEM_CONFIG_DEFAULTS.GLOBAL_KEY
   },
   aiModel: {
     type: String,
-    default: 'openai/gpt-oss-120b'
+    default: SYSTEM_CONFIG_DEFAULTS.AI_MODEL
   },
   aiFallbackModel: {
     type: String,
-    default: 'llama-3.3-70b-versatile'
+    default: SYSTEM_CONFIG_DEFAULTS.AI_FALLBACK_MODEL
   },
   aiTemperature: {
     type: Number,
-    default: 1.0,
+    default: SYSTEM_CONFIG_DEFAULTS.AI_TEMPERATURE,
     min: 0,
     max: 2
   },
   aiMaxTokens: {
     type: Number,
-    default: 2048,
+    default: SYSTEM_CONFIG_DEFAULTS.AI_MAX_TOKENS,
     min: 256,
     max: 8192
   },
@@ -33,13 +34,13 @@ const systemConfigSchema = new mongoose.Schema({
   },
   dailyCardLimit: {
     type: Number,
-    default: 30,
+    default: SYSTEM_CONFIG_DEFAULTS.DAILY_CARD_LIMIT,
     min: 1,
     max: 1000
   },
   maxTextLength: {
     type: Number,
-    default: 4000,
+    default: SYSTEM_CONFIG_DEFAULTS.MAX_TEXT_LENGTH,
     min: 100,
     max: 20000
   },

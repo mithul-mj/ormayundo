@@ -9,11 +9,7 @@ import analyticsRoutes from './src/routes/analyticsRoutes.js';
 import deckRoutes from './src/routes/deckRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import SystemConfig from './src/models/systemConfig.js';
-import {
-  generalRateLimiter,
-  authRateLimiter,
-  recallCreationRateLimiter
-} from './src/middleware/rateLimitMiddleware.js';
+import { generalRateLimiter } from './src/middleware/rateLimitMiddleware.js';
 import { startCronJobs } from './src/services/pushService.js';
 import { closeAiWorker } from './src/workers/aiWorker.js';
 import { closeRedis } from './src/config/redis.js';
@@ -71,9 +67,9 @@ app.get('/api/announcement', async (req, res) => {
   }
 });
 
-// Route specific rate limiters
-app.use('/api/auth', authRateLimiter, authRoutes);
-app.use('/api/recall', recallCreationRateLimiter, recallRoutes);
+// Application feature routes
+app.use('/api/auth', authRoutes);
+app.use('/api/recall', recallRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/decks', deckRoutes);
 app.use('/api/admin', adminRoutes);

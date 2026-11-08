@@ -44,7 +44,7 @@ export default function ExtensionShowcase({ onOpenModal }) {
                 <span className="text-xs text-muted">Any webpage</span>
               </div>
 
-              <div className="rounded-2xl border border-divider overflow-hidden mb-4 shadow-inner bg-gray-50">
+              <div className="rounded-2xl overflow-hidden mb-4 bg-gray-50">
                 <img
                   src="/images/part-save-button.png"
                   alt="Highlighted text with Save to Ormayundo floating button"
@@ -87,12 +87,7 @@ export default function ExtensionShowcase({ onOpenModal }) {
                 <span className="text-xs font-semibold text-brand">94 Due Today</span>
               </div>
 
-              <div className={
-      [
-        'rounded-2xl border border-divider overflow-hidden mb-4 shadow-inner',
-        'bg-gray-50 max-h-56 flex items-center justify-center'
-      ].join(' ')
-    }>
+              <div className="rounded-2xl overflow-hidden mb-4 bg-gray-50 max-h-56 flex items-center justify-center">
                 <img
                   src="/images/part-extension-popup.png"
                   alt="Extension popup with Active Recall question card"
@@ -133,7 +128,7 @@ export default function ExtensionShowcase({ onOpenModal }) {
               </div>
 
               <div
-                className="rounded-2xl overflow-hidden border border-divider relative group cursor-pointer"
+                className="rounded-2xl overflow-hidden relative group cursor-pointer"
                 onClick={() => onOpenModal('/images/extension-in-action.jpg')}
               >
                 <img

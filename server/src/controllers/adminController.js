@@ -7,6 +7,7 @@ import SystemIncident from '../models/systemIncident.js';
 import { aiQueue } from '../workers/aiWorker.js';
 import { sendPushNotification } from '../services/pushService.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
+import { PAGINATION, SYSTEM_METRICS } from '../utils/constants.js';
 
 // 1. High-level Overview Dashboard Statistics
 export const getAdminStats = async (req, res) => {
@@ -19,7 +20,9 @@ export const getAdminStats = async (req, res) => {
       blockedUsers,
       totalCards,
       graduatedCards,
+      archivedCards,
       totalDecks,
+      topDecksAgg,
       tokenAgg,
       activeTodayCount,
       jobCounts,
@@ -29,7 +32,14 @@ export const getAdminStats = async (req, res) => {
       User.countDocuments({ isBlocked: true }),
       RecallItem.countDocuments({ status: 'active' }),
       RecallItem.countDocuments({ status: 'active', isGraduated: true }),
+      RecallItem.countDocuments({ status: 'archived' }),
       Deck.countDocuments(),
+      RecallItem.aggregate([
+        { $match: { status: 'active' } },
+        { $group: { _id: { $ifNull: ['$deck', 'General'] }, count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 6 }
+      ]),
       TokenUsage.aggregate([
         {
           $group: {
@@ -70,13 +80,19 @@ export const getAdminStats = async (req, res) => {
       flashcards: {
         total: totalCards,
         graduated: graduatedCards,
-        totalDecks
+        archived: archivedCards,
+        learning: Math.max(0, totalCards - graduatedCards),
+        totalDecks,
+        topDecks: topDecksAgg.map((d) => ({
+          name: d._id,
+          count: d.count
+        }))
       },
       tokens: {
         totalTokens: tokenStats.totalTokens,
         promptTokens: tokenStats.promptTokens,
         completionTokens: tokenStats.completionTokens,
-        estimatedCost: Number(tokenStats.estimatedCost.toFixed(4)),
+        estimatedCost: Number(tokenStats.estimatedCost.toFixed(SYSTEM_METRICS.COST_DECIMALS)),
         totalGenerations: tokenStats.count
       },
       queue: jobCounts,
@@ -93,8 +109,8 @@ export const getAdminStats = async (req, res) => {
 // 2. Paginated User Directory with Search & Stats
 export const getAdminUsers = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const page = Math.max(PAGINATION.DEFAULT_PAGE, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
+    const limit = Math.min(PAGINATION.MAX_LIMIT, Math.max(PAGINATION.DEFAULT_PAGE, parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT));
     const skip = (page - 1) * limit;
     const search = req.query.search?.trim();
     const status = req.query.status; // 'all', 'active', 'blocked'
@@ -306,7 +322,7 @@ export const getTokenAnalytics = async (req, res) => {
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
     fourteenDaysAgo.setHours(0, 0, 0, 0);
 
-    const [totalsAgg, dailyAgg, leaderboardAgg, recentLogs] = await Promise.all([
+    const [totalsAgg, dailyAgg, leaderboardAgg, modelAgg, recentLogs] = await Promise.all([
       // Overall totals
       TokenUsage.aggregate([
         {
@@ -359,6 +375,20 @@ export const getTokenAnalytics = async (req, res) => {
         },
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } }
       ]),
+      // Breakdown by AI Model
+      TokenUsage.aggregate([
+        {
+          $group: {
+            _id: { $ifNull: ['$model', 'openai/gpt-oss-120b'] },
+            totalTokens: { $sum: '$totalTokens' },
+            promptTokens: { $sum: '$promptTokens' },
+            completionTokens: { $sum: '$completionTokens' },
+            estimatedCost: { $sum: '$estimatedCost' },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { totalTokens: -1 } }
+      ]),
       // Recent 20 generations
       TokenUsage.find()
         .populate('userId', 'email')
@@ -399,8 +429,16 @@ export const getTokenAnalytics = async (req, res) => {
         totalTokens: d.totalTokens,
         promptTokens: d.promptTokens,
         completionTokens: d.completionTokens,
-        cost: Number(d.estimatedCost.toFixed(4)),
+        cost: Number(d.estimatedCost.toFixed(SYSTEM_METRICS.COST_DECIMALS)),
         count: d.count
+      })),
+      models: modelAgg.map((m) => ({
+        model: m._id,
+        totalTokens: m.totalTokens,
+        promptTokens: m.promptTokens,
+        completionTokens: m.completionTokens,
+        cost: Number(m.estimatedCost.toFixed(SYSTEM_METRICS.COST_DECIMALS)),
+        count: m.count
       })),
       leaderboard,
       recentLogs: recentLogs.map((log) => ({
@@ -410,7 +448,7 @@ export const getTokenAnalytics = async (req, res) => {
         deck: log.cardId?.deck || 'General',
         totalTokens: log.totalTokens,
         model: log.model,
-        estimatedCost: Number(log.estimatedCost.toFixed(5)),
+        estimatedCost: Number(log.estimatedCost.toFixed(SYSTEM_METRICS.LOG_COST_DECIMALS)),
         sourceUrl: log.sourceUrl,
         createdAt: log.createdAt
       }))
@@ -446,9 +484,9 @@ export const getSystemHealth = async (req, res) => {
     res.status(STATUS_CODES.OK).json({
       uptimeSeconds: Math.floor(process.uptime()),
       memory: {
-        rssMb: Math.round(memory.rss / 1024 / 1024),
-        heapUsedMb: Math.round(memory.heapUsed / 1024 / 1024),
-        heapTotalMb: Math.round(memory.heapTotal / 1024 / 1024)
+        rssMb: Math.round(memory.rss / SYSTEM_METRICS.BYTES_PER_MB),
+        heapUsedMb: Math.round(memory.heapUsed / SYSTEM_METRICS.BYTES_PER_MB),
+        heapTotalMb: Math.round(memory.heapTotal / SYSTEM_METRICS.BYTES_PER_MB)
       },
       queue: jobCounts,
       notifications: {
@@ -497,11 +535,11 @@ export const broadcastPush = async (req, res) => {
       });
     }
 
-    // Send notifications in batches of 10
+    // Send notifications in batches
     let dispatched = 0;
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
-      const batch = tokenArray.slice(i, i + BATCH_SIZE);
+    const batchSize = SYSTEM_METRICS.PUSH_BATCH_SIZE;
+    for (let i = 0; i < tokenArray.length; i += batchSize) {
+      const batch = tokenArray.slice(i, i + batchSize);
       await Promise.allSettled(
         batch.map((token) => sendPushNotification(token, title, body))
       );
@@ -704,8 +742,8 @@ export const deleteUser = async (req, res) => {
 // 14. Search & List Flashcards Across All Users
 export const getAdminFlashcards = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const page = Math.max(PAGINATION.DEFAULT_PAGE, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
+    const limit = Math.min(PAGINATION.MAX_LIMIT, Math.max(PAGINATION.DEFAULT_PAGE, parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT));
     const skip = (page - 1) * limit;
     const search = req.query.search?.trim();
     const status = req.query.status;

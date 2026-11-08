@@ -52,12 +52,7 @@ export default function HowItWorks() {
           {steps.map((s) => (
             <div
               key={s.num}
-              className={
-      [
-        'p-7 rounded-3xl bg-white border border-divider shadow-sm hover:shadow-md',
-        'hover:border-border-card transition-all flex flex-col justify-between'
-      ].join(' ')
-    }
+              className="p-6 sm:p-7 rounded-3xl bg-surface/50 hover:bg-surface transition-all flex flex-col justify-between"
             >
               <div>
                 <span className={

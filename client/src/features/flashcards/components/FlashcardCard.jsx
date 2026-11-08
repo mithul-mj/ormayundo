@@ -101,12 +101,7 @@ export default function FlashcardCard({
     }
             />
           ) : (
-            <div className={
-      [
-        'p-5 bg-gray-50/50 border border-gray-100 rounded-2xl shadow-sm max-h-72',
-        'overflow-y-auto custom-scrollbar'
-      ].join(' ')
-    }>
+            <div className="py-1 max-h-72 overflow-y-auto custom-scrollbar">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
