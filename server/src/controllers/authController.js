@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import generateTokens from '../utils/generateTokens.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
-import { MESSAGES, AUTH_COOKIES } from '../utils/constants.js';
+import { MESSAGES, AUTH_COOKIES, USER_ROLES } from '../utils/constants.js';
 import axios from 'axios';
 
 // Authenticate via Google OAuth token (ID Token or Access Token)
@@ -79,7 +79,7 @@ export const adminLogin = async (req, res) => {
 
   if (!email || !password) {
     return res.status(STATUS_CODES.BAD_REQUEST).json({
-      message: 'Email and password are required'
+      message: MESSAGES.ERROR.ADMIN_CREDENTIALS_REQUIRED
     });
   }
 
@@ -90,13 +90,13 @@ export const adminLogin = async (req, res) => {
 
     if (!user) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        message: 'Invalid administrator credentials'
+        message: MESSAGES.ERROR.INVALID_ADMIN_CREDENTIALS
       });
     }
 
-    if (user.role !== 'admin') {
+    if (user.role !== USER_ROLES.ADMIN) {
       return res.status(STATUS_CODES.FORBIDDEN).json({
-        message: 'Access restricted: This account does not have administrator privileges'
+        message: MESSAGES.ERROR.ADMIN_ROLE_RESTRICTED
       });
     }
 
@@ -104,20 +104,20 @@ export const adminLogin = async (req, res) => {
       return res.status(STATUS_CODES.FORBIDDEN).json({
         message: user.blockedReason
           ? `Account suspended: ${user.blockedReason}`
-          : 'Administrator account suspended'
+          : MESSAGES.ERROR.ACCOUNT_SUSPENDED
       });
     }
 
     if (!user.password) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        message: 'No password configured for this administrator. Please run the seed script.'
+        message: MESSAGES.ERROR.ADMIN_NOT_CONFIGURED
       });
     }
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        message: 'Invalid administrator credentials'
+        message: MESSAGES.ERROR.INVALID_ADMIN_CREDENTIALS
       });
     }
 
@@ -126,8 +126,8 @@ export const adminLogin = async (req, res) => {
     res.status(STATUS_CODES.OK).json({
       _id: user._id,
       email: user.email,
-      role: 'admin',
-      message: 'Administrator login successful'
+      role: USER_ROLES.ADMIN,
+      message: MESSAGES.SUCCESS.ADMIN_LOGIN
     });
   } catch (error) {
     console.error('Admin Login Error:', error);

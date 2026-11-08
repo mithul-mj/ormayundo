@@ -5,6 +5,7 @@ package-lock.json
 # Environment Variables & Secrets
 .env
 .env.*
+!.env.example
 config/firebase-service-account.json
 firebase-service-account.json
 

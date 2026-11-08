@@ -1,3 +1,11 @@
+export { STATUS_CODES } from './statusCodes.js';
+
+// User Roles
+export const USER_ROLES = {
+  USER: 'user',
+  ADMIN: 'admin'
+};
+
 // Queue & Job Names
 export const QUEUE_NAMES = {
   AI_FLASHCARD_GENERATION: 'ai-flashcard-generation'
@@ -40,6 +48,51 @@ export const AUTH_COOKIES = {
   REFRESH_TOKEN: 'refreshToken'
 };
 
+// JWT & Session Lifetimes
+export const TOKEN_EXPIRY = {
+  ACCESS_TOKEN_MS: 15 * 60 * 1000, // 15 minutes
+  REFRESH_TOKEN_MS: 7 * 24 * 60 * 60 * 1000, // 7 days
+  ACCESS_TOKEN_JWT: '15m',
+  REFRESH_TOKEN_JWT: '7d'
+};
+
+// Flashcard Statuses
+export const CARD_STATUS = {
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+  DELETED: 'deleted'
+};
+
+// Incident Management
+export const INCIDENT_SEVERITY = {
+  CRITICAL: 'critical',
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low'
+};
+
+export const INCIDENT_STATUS = {
+  UNRESOLVED: 'unresolved',
+  RESOLVED: 'resolved'
+};
+
+// Default Fallback Admin Credentials (Used when environment variables are not provided)
+export const DEFAULT_ADMIN_CREDENTIALS = {
+  EMAIL: 'admin@ormayundo.com',
+  PASSWORD: 'Admin@Ormayundo2026!'
+};
+
+// System Guardrail Defaults
+export const SYSTEM_CONFIG_DEFAULTS = {
+  GLOBAL_KEY: 'global_settings',
+  AI_MODEL: 'openai/gpt-oss-120b',
+  AI_FALLBACK_MODEL: 'llama-3.3-70b-versatile',
+  AI_TEMPERATURE: 1.0,
+  AI_MAX_TOKENS: 2048,
+  DAILY_CARD_LIMIT: 30,
+  MAX_TEXT_LENGTH: 4000
+};
+
 // Application Messages
 export const MESSAGES = {
   SUCCESS: {
@@ -48,11 +101,27 @@ export const MESSAGES = {
     ALL_RECALL_WIPED: 'All recall items wiped successfully',
     DECK_DELETED: 'Deck deleted successfully',
     GOOGLE_LOGIN: 'Google Login successful',
+    ADMIN_LOGIN: 'Administrator login successful',
+    ADMIN_SEEDED: 'Administrator account seeded successfully',
+    USER_BLOCKED: 'User blocked successfully',
+    USER_UNBLOCKED: 'User unblocked successfully',
+    GUARDRAILS_UPDATED: 'Platform configuration updated successfully',
+    INCIDENT_RESOLVED: 'Incident marked as resolved',
+    NOTIFICATION_BROADCAST: 'Broadcast notification sent successfully',
     LOGGED_OUT: 'Logged out successfully',
     FCM_TOKEN_SAVED: 'FCM Token saved successfully'
   },
   ERROR: {
     UNAUTHORIZED: 'Unauthorized',
+    FORBIDDEN: 'Forbidden',
+    ADMIN_REQUIRED: 'Access denied: Administrator privileges required',
+    INVALID_ADMIN_CREDENTIALS: 'Invalid administrator credentials',
+    ADMIN_CREDENTIALS_REQUIRED: 'Email and password are required',
+    ADMIN_NOT_CONFIGURED: 'No password configured for this administrator. Please run the seed script.',
+    ADMIN_ROLE_RESTRICTED: 'Access restricted: This account does not have administrator privileges',
+    ADMIN_USER_SAME_EMAIL: 'An administrator and regular user cannot use the same email address',
+    ACCOUNT_SUSPENDED: 'Account suspended by administrator',
+    SESSION_INVALIDATED: 'Session invalidated. Please log in again.',
     NO_GOOGLE_TOKEN: 'No Google token provided',
     INVALID_GOOGLE_TOKEN: 'Invalid Google token',
     GOOGLE_EMAIL_FAILED: 'Failed to get email from Google',

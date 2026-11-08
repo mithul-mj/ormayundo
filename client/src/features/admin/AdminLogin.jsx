@@ -12,6 +12,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { API_URL } from '../../shared/config';
+import { ADMIN_DEFAULTS, MESSAGES } from '../../shared/constants';
 
 export default function AdminLogin({ onLoginSuccess, onBack }) {
   const [email, setEmail] = useState('');
@@ -23,7 +24,7 @@ export default function AdminLogin({ onLoginSuccess, onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      setError('Please provide both administrator email and password.');
+      setError(MESSAGES.ERROR.ADMIN_CREDENTIALS_REQUIRED);
       return;
     }
 
@@ -117,7 +118,7 @@ export default function AdminLogin({ onLoginSuccess, onBack }) {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@ormayundo.com"
+                  placeholder={ADMIN_DEFAULTS.EMAIL_PLACEHOLDER}
                   className="w-full pl-10 pr-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
                 />
               </div>
@@ -192,3 +193,4 @@ export default function AdminLogin({ onLoginSuccess, onBack }) {
     </div>
   );
 }
+

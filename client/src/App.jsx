@@ -4,6 +4,7 @@ import axios from 'axios';
 import { API_URL } from './shared/config';
 import { initWebPush } from './shared/services/firebase';
 import { DashboardNavbar } from './shared/components';
+import { ROUTES, APP_TABS } from './shared/constants';
 
 // Code-split feature domains for scalability and fast initial load
 const LandingPage = lazy(() => import('./features/landing'));
@@ -24,21 +25,21 @@ function PageLoader() {
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activeTab, setActiveTab] = useState(() => (
-    window.location.pathname === '/admin' ? 'admin' : 'dashboard'
+    window.location.pathname === ROUTES.ADMIN ? APP_TABS.ADMIN : APP_TABS.DASHBOARD
   ));
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [announcement, setAnnouncement] = useState(null);
   const [loading, setLoading] = useState(
-    () => window.location.pathname !== '/privacy'
+    () => window.location.pathname !== ROUTES.PRIVACY
   );
 
   // Client-side navigation helper with browser history support
   const navigate = (path) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
-    if (path === '/admin') {
-      setActiveTab('admin');
+    if (path === ROUTES.ADMIN) {
+      setActiveTab(APP_TABS.ADMIN);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -46,8 +47,8 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname);
-      if (window.location.pathname === '/admin') {
-        setActiveTab('admin');
+      if (window.location.pathname === ROUTES.ADMIN) {
+        setActiveTab(APP_TABS.ADMIN);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -61,8 +62,8 @@ export default function App() {
         const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
         setUser(res.data);
         setIsAuthenticated(true);
-        if (window.location.pathname === '/admin' && res.data?.role === 'admin') {
-          setActiveTab('admin');
+        if (window.location.pathname === ROUTES.ADMIN && res.data?.role === 'admin') {
+          setActiveTab(APP_TABS.ADMIN);
         }
       } catch {
         setUser(null);
@@ -72,7 +73,7 @@ export default function App() {
       }
     };
 
-    if (window.location.pathname !== '/privacy') {
+    if (window.location.pathname !== ROUTES.PRIVACY) {
       checkAuth();
       axios
         .get(`${API_URL}/announcement`)
@@ -108,16 +109,16 @@ export default function App() {
   }
 
   // 1. Standalone Page: Privacy Policy (/privacy)
-  if (currentPath === '/privacy') {
+  if (currentPath === ROUTES.PRIVACY) {
     return (
       <Suspense fallback={<PageLoader />}>
-        <Privacy onGoHome={() => navigate('/')} />
+        <Privacy onGoHome={() => navigate(ROUTES.HOME)} />
       </Suspense>
     );
   }
 
   // 2. Standalone Page: Login / Auth (/login)
-  if (currentPath === '/login' && !isAuthenticated) {
+  if (currentPath === ROUTES.LOGIN && !isAuthenticated) {
     return (
       <Suspense fallback={<PageLoader />}>
         <Auth
@@ -129,16 +130,16 @@ export default function App() {
               console.error('Failed to load user profile on login:', err);
             }
             setIsAuthenticated(true);
-            navigate('/app');
+            navigate(ROUTES.APP);
           }}
-          onBack={() => navigate('/')}
+          onBack={() => navigate(ROUTES.HOME)}
         />
       </Suspense>
     );
   }
 
   // 3. Standalone Page: Dedicated Administrator Portal (/admin)
-  if (currentPath === '/admin') {
+  if (currentPath === ROUTES.ADMIN) {
     return (
       <Suspense fallback={<PageLoader />}>
         <AdminPortal
@@ -151,14 +152,14 @@ export default function App() {
             setUser(null);
             setIsAuthenticated(false);
           }}
-          onNavigateHome={() => navigate('/')}
+          onNavigateHome={() => navigate(ROUTES.HOME)}
         />
       </Suspense>
     );
   }
 
   // 4. Standalone Page: App Dashboard (/app or /dashboard)
-  if (currentPath === '/app' || currentPath === '/dashboard') {
+  if (currentPath === ROUTES.APP || currentPath === ROUTES.DASHBOARD) {
     if (!isAuthenticated) {
       return (
         <Suspense fallback={<PageLoader />}>
@@ -171,9 +172,9 @@ export default function App() {
                 console.error('Failed to load user profile on login:', err);
               }
               setIsAuthenticated(true);
-              navigate('/app');
+              navigate(ROUTES.APP);
             }}
-            onBack={() => navigate('/')}
+            onBack={() => navigate(ROUTES.HOME)}
           />
         </Suspense>
       );
@@ -184,13 +185,13 @@ export default function App() {
         <DashboardNavbar
           activeTab={activeTab}
           onSelectTab={(tab) => {
-            if (tab === 'admin') {
-              navigate('/admin');
+            if (tab === APP_TABS.ADMIN) {
+              navigate(ROUTES.ADMIN);
             } else {
               setActiveTab(tab);
             }
           }}
-          onNavigateHome={() => navigate('/')}
+          onNavigateHome={() => navigate(ROUTES.HOME)}
           onLogout={handleLogout}
           user={user}
         />
@@ -204,9 +205,9 @@ export default function App() {
 
         <main className="flex-1 animate-fade-in pb-12">
           <Suspense fallback={<PageLoader />}>
-            {activeTab === 'dashboard' ? (
+            {activeTab === APP_TABS.DASHBOARD ? (
               <AnalyticsDashboard />
-            ) : activeTab === 'manage' ? (
+            ) : activeTab === APP_TABS.MANAGE ? (
               <FlashcardManager />
             ) : (
               <AnalyticsDashboard />
@@ -217,15 +218,15 @@ export default function App() {
     );
   }
 
-  // 4. Standalone Page: Landing Page (/)
+  // 5. Standalone Page: Landing Page (/)
   return (
     <Suspense fallback={<PageLoader />}>
       <LandingPage
         onGetStarted={() => {
           if (isAuthenticated) {
-            navigate('/app');
+            navigate(ROUTES.APP);
           } else {
-            navigate('/login');
+            navigate(ROUTES.LOGIN);
           }
         }}
         isAuthenticated={isAuthenticated}

@@ -1,31 +1,32 @@
 import jwt from 'jsonwebtoken';
+import { AUTH_COOKIES, TOKEN_EXPIRY } from './constants.js';
 
 const generateTokens = (res, userId, tokenVersion = 0) => {
-  // 1. Create Access Token (Short-lived: 15 minutes)
+  // 1. Create Access Token (Short-lived)
   const accessToken = jwt.sign({ userId, tokenVersion }, process.env.JWT_SECRET, {
-    expiresIn: '15m'
+    expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN_JWT
   });
 
-  // 2. Create Refresh Token (Long-lived: 7 days)
+  // 2. Create Refresh Token (Long-lived with rotation)
   const refreshToken = jwt.sign({ userId, tokenVersion }, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: '7d'
+    expiresIn: TOKEN_EXPIRY.REFRESH_TOKEN_JWT
   });
 
   // 3. Set Access Token as HTTP-Only Cookie
-  res.cookie('accessToken', accessToken, {
+  res.cookie(AUTH_COOKIES.ACCESS_TOKEN, accessToken, {
     httpOnly: true,
-    secure: true, // Chrome Extensions require secure: true for cross-origin
-    sameSite: 'none', // Critical for cross-origin (chrome-extension:// to http://localhost)
-    maxAge: 15 * 60 * 1000 // 15 minutes
+    secure: true, // Cross-origin compatibility for Chrome Extension and Web
+    sameSite: 'none',
+    maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS
   });
 
   // 4. Set Refresh Token as HTTP-Only Cookie
-  res.cookie('refreshToken', refreshToken, {
+  res.cookie(AUTH_COOKIES.REFRESH_TOKEN, refreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
     path: '/api/auth/refresh',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS
   });
 
   return { accessToken, refreshToken };

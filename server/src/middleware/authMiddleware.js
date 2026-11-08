@@ -1,19 +1,20 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
+import { AUTH_COOKIES, MESSAGES } from '../utils/constants.js';
 
 export const protect = async (req, res, next) => {
-  const token = req.cookies?.accessToken;
+  const token = req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN];
 
   if (!token) {
     res.status(STATUS_CODES.UNAUTHORIZED);
-    throw new Error('Not authorized, no token');
+    throw new Error(MESSAGES.ERROR.UNAUTHORIZED);
   }
 
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (error) {
+  } catch {
     res.status(STATUS_CODES.UNAUTHORIZED);
     throw new Error('Not authorized, token failed');
   }
@@ -31,7 +32,7 @@ export const protect = async (req, res, next) => {
     throw new Error(
       req.user.blockedReason
         ? `Account suspended: ${req.user.blockedReason}`
-        : 'Account suspended by administrator'
+        : MESSAGES.ERROR.ACCOUNT_SUSPENDED
     );
   }
 
@@ -42,7 +43,7 @@ export const protect = async (req, res, next) => {
     decoded.tokenVersion !== req.user.tokenVersion
   ) {
     res.status(STATUS_CODES.UNAUTHORIZED);
-    throw new Error('Session invalidated or expired. Please log in again.');
+    throw new Error(MESSAGES.ERROR.SESSION_INVALIDATED);
   }
 
   next();

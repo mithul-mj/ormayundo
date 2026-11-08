@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { USER_ROLES } from '../utils/constants.js';
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -34,8 +35,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+        enum: Object.values(USER_ROLES),
+        default: USER_ROLES.USER
     },
     isBlocked: {
         type: Boolean,

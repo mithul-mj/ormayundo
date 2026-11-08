@@ -5,12 +5,35 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   LOGIN: '/login',
   PRIVACY: '/privacy',
+  ADMIN: '/admin',
 };
 
 // Dashboard Navigation Tabs
 export const APP_TABS = {
   DASHBOARD: 'dashboard',
   MANAGE: 'manage',
+  ADMIN: 'admin',
+};
+
+// Admin Portal Feature Tabs
+export const ADMIN_TABS = {
+  OVERVIEW: 'overview',
+  USERS: 'users',
+  CARDS: 'cards',
+  GUARDRAILS: 'guardrails',
+  TOKENS: 'tokens',
+  SYSTEM: 'system',
+};
+
+// User Roles
+export const USER_ROLES = {
+  USER: 'user',
+  ADMIN: 'admin',
+};
+
+// Admin Portal Defaults
+export const ADMIN_DEFAULTS = {
+  EMAIL_PLACEHOLDER: 'admin@ormayundo.com',
 };
 
 // Spaced Repetition Limits & Defaults
@@ -55,16 +78,17 @@ export const MESSAGES = {
     COPIED: 'Copied',
     TOKEN_SYNCED: 'Web push token synced successfully',
     LOGIN_SUCCESS: 'Logged in successfully',
+    ADMIN_LOGIN_SUCCESS: 'Administrator login successful',
     LOGOUT_SUCCESS: 'Logged out successfully',
   },
   ERROR: {
     PERMISSION_DENIED: 'Notification permission denied or dismissed.',
     PUSH_UNSUPPORTED: 'Push notifications not supported in this browser.',
     REGISTRATION_FAILED: 'Failed to register web push notifications.',
+    ADMIN_CREDENTIALS_REQUIRED: 'Please provide both administrator email and password.',
   },
   ASSETS: {
     EXTENSION_ZIP: 'ormayundo-extension.zip',
     CHROME_EXTENSIONS_URL: 'chrome://extensions',
   },
 };
-

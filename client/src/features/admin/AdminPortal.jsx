@@ -22,6 +22,7 @@ import AdminTokensTab from './AdminTokensTab';
 import AdminGuardrailsTab from './AdminGuardrailsTab';
 import AdminSystemTab from './AdminSystemTab';
 import AdminLogin from './AdminLogin';
+import { ADMIN_TABS, USER_ROLES } from '../../shared/constants';
 
 export default function AdminPortal({
   user: initialUser = null,
@@ -31,7 +32,7 @@ export default function AdminPortal({
 }) {
   const [currentUser, setCurrentUser] = useState(initialUser);
   const [verifyingAuth, setVerifyingAuth] = useState(!initialUser);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(ADMIN_TABS.OVERVIEW);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -168,7 +169,7 @@ export default function AdminPortal({
   useEffect(() => {
     let ignore = false;
     async function checkAdminAuth() {
-      if (initialUser && initialUser.role === 'admin') {
+      if (initialUser && initialUser.role === USER_ROLES.ADMIN) {
         setCurrentUser(initialUser);
         setVerifyingAuth(false);
         return;
@@ -176,7 +177,7 @@ export default function AdminPortal({
       try {
         const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
         if (!ignore) {
-          if (res.data?.role === 'admin') {
+          if (res.data?.role === USER_ROLES.ADMIN) {
             setCurrentUser(res.data);
           } else {
             setCurrentUser(null);
@@ -201,7 +202,7 @@ export default function AdminPortal({
 
   // Initial load on mount or when currentUser becomes an admin
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || currentUser.role !== USER_ROLES.ADMIN) {
       return;
     }
     let ignore = false;
@@ -409,7 +410,7 @@ export default function AdminPortal({
     );
   }
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || currentUser.role !== USER_ROLES.ADMIN) {
     return (
       <AdminLogin
         onLoginSuccess={(adminData) => {
