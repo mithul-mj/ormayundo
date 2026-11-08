@@ -3,6 +3,8 @@ import { getBullMQConnectionOptions } from '../config/redis.js';
 import { generateRecallQuestion } from '../services/aiService.js';
 import RecallItem from '../models/recallItem.js';
 import Deck from '../models/deck.js';
+import TokenUsage from '../models/tokenUsage.js';
+import { logAndNotifyIncident } from '../services/alertService.js';
 import { QUEUE_NAMES } from '../utils/constants.js';
 
 const connectionOptions = getBullMQConnectionOptions();
@@ -33,7 +35,7 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
   // 2. Call AI Generation & Classification
   console.log(`[BullMQ] Starting AI Generation with decks [${userDeckNames.join(', ')}]...`);
   try {
-    const { question, deck } = await generateRecallQuestion(selectedText, userDeckNames, sourceUrl);
+    const { question, deck, usage, model } = await generateRecallQuestion(selectedText, userDeckNames, sourceUrl);
     console.log(`[BullMQ] AI Generation successful! Question: "${question}", Assigned Deck: "${deck}"`);
 
     // 3. Save to DB
@@ -46,6 +48,31 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
       deck: deck || 'General'
     });
     console.log(`[BullMQ] Successfully created MongoDB document with ID: ${newItem._id} in deck "${newItem.deck}"`);
+
+    // 4. Record Token Consumption
+    if (usage && (usage.totalTokens > 0 || usage.promptTokens > 0)) {
+      const promptTokens = usage.promptTokens || 0;
+      const completionTokens = usage.completionTokens || 0;
+      const totalTokens = usage.totalTokens || (promptTokens + completionTokens);
+      // Groq standard estimate: ~$0.15/1M prompt, ~$0.60/1M completion
+      const estimatedCost = (promptTokens * 0.00000015) + (completionTokens * 0.00000060);
+
+      try {
+        await TokenUsage.create({
+          userId,
+          cardId: newItem._id,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          model: model || 'openai/gpt-oss-120b',
+          estimatedCost,
+          sourceUrl
+        });
+        console.log(`[BullMQ] Token usage logged: ${totalTokens} tokens ($${estimatedCost.toFixed(6)})`);
+      } catch (tokenErr) {
+        console.error('[BullMQ] Failed to log token usage:', tokenErr.message);
+      }
+    }
 
     return { success: true, id: newItem._id };
   } catch (error) {
@@ -61,8 +88,25 @@ export const aiWorker = new Worker(QUEUE_NAMES.AI_FLASHCARD_GENERATION, async (j
   }
 });
 
-aiWorker.on('failed', (job, err) => {
+aiWorker.on('failed', async (job, err) => {
   console.error(`[BullMQ] Job ${job?.id} failed after retries:`, err.message);
+  try {
+    await logAndNotifyIncident({
+      type: 'AI_GENERATION_FAILED',
+      severity: 'high',
+      message: `AI flashcard generation failed for Job #${job?.id}: ${err.message}`,
+      details: {
+        jobId: job?.id,
+        selectedTextSnippet: job?.data?.selectedText ? job.data.selectedText.substring(0, 100) : '',
+        sourceUrl: job?.data?.sourceUrl,
+        errorStack: err.stack
+      },
+      userId: job?.data?.userId,
+      jobId: job?.id
+    });
+  } catch (logErr) {
+    console.error('[BullMQ] Failed to dispatch incident alert:', logErr);
+  }
 });
 
 /**

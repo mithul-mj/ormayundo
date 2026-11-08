@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-const generateTokens = (res, userId) => {
-  // 1. Create Access Token (Short-lived)
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
+const generateTokens = (res, userId, tokenVersion = 0) => {
+  // 1. Create Access Token (Short-lived: 15 minutes)
+  const accessToken = jwt.sign({ userId, tokenVersion }, process.env.JWT_SECRET, {
     expiresIn: '15m'
   });
 
-  // 2. Create Refresh Token (Long-lived)
-  const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
+  // 2. Create Refresh Token (Long-lived: 7 days)
+  const refreshToken = jwt.sign({ userId, tokenVersion }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: '7d'
   });
 

@@ -1,10 +1,11 @@
-import { Brain, LayoutDashboard, Library } from 'lucide-react';
+import { Brain, LayoutDashboard, Library, ShieldCheck } from 'lucide-react';
 
 export default function DashboardNavbar({
   activeTab,
   onSelectTab,
   onNavigateHome,
   onLogout,
+  user,
 }) {
   return (
     <nav className="bg-white sticky top-0 z-50 border-b border-divider">
@@ -55,6 +56,21 @@ export default function DashboardNavbar({
             <Library className="w-3.5 h-3.5" />
             <span>Manage Cards</span>
           </button>
+
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => onSelectTab('admin')}
+              className={[
+                'flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-xs transition-all cursor-pointer',
+                activeTab === 'admin'
+                  ? 'bg-purple-700 text-white shadow-sm'
+                  : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60',
+              ].join(' ')}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Admin</span>
+            </button>
+          )}
 
           <div className="w-px h-6 bg-divider mx-2" />
 

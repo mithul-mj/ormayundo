@@ -2,6 +2,7 @@ import admin from 'firebase-admin';
 import cron from 'node-cron';
 import User from '../models/user.js';
 import RecallItem from '../models/recallItem.js';
+import SystemConfig from '../models/systemConfig.js';
 import { readFileSync } from 'fs';
 
 try {
@@ -65,6 +66,16 @@ export const startCronJobs = () => {
       console.log("[Cron] Previous push notification cycle still active, skipping to prevent overlap.");
       return;
     }
+
+    try {
+      const config = await SystemConfig.getSettings();
+      if (!config.pushNotificationsEnabled) {
+        return;
+      }
+    } catch (e) {
+      // Continue if config lookup fails
+    }
+
     isCronRunning = true;
 
     try {

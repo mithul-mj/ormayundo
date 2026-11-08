@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import generateTokens from '../utils/generateTokens.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
@@ -29,16 +30,40 @@ export const googleAuth = async (req, res) => {
       throw new Error(MESSAGES.ERROR.GOOGLE_EMAIL_FAILED);
     }
 
-    let user = await User.findOne({ email });
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    let user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      user = await User.create({ email });
+      const userCount = await User.countDocuments();
+      const designatedAdmin =
+        process.env.ADMIN_EMAIL &&
+        cleanEmail === process.env.ADMIN_EMAIL.trim().toLowerCase();
+      const role = userCount === 0 || designatedAdmin ? 'admin' : 'user';
+      user = await User.create({ email: cleanEmail, role });
+    } else if (
+      process.env.ADMIN_EMAIL &&
+      cleanEmail === process.env.ADMIN_EMAIL.trim().toLowerCase() &&
+      user.role !== 'admin'
+    ) {
+      user.role = 'admin';
+      await user.save();
     }
 
-    generateTokens(res, user._id);
+    if (user.isBlocked) {
+      res.status(STATUS_CODES.FORBIDDEN);
+      throw new Error(
+        user.blockedReason
+          ? `Account suspended: ${user.blockedReason}`
+          : 'Account suspended by administrator'
+      );
+    }
+
+    generateTokens(res, user._id, user.tokenVersion || 0);
 
     res.status(STATUS_CODES.OK).json({
       _id: user._id,
       email: user.email,
+      role: user.role || 'user',
       message: MESSAGES.SUCCESS.GOOGLE_LOGIN
     });
   } catch (error) {
@@ -71,6 +96,8 @@ export const getMe = async (req, res) => {
   res.status(STATUS_CODES.OK).json({
     _id: req.user._id,
     email: req.user.email,
+    role: req.user.role || 'user',
+    isBlocked: req.user.isBlocked || false,
     currentStreak: req.user.currentStreak || 0,
     maxStreak: req.user.maxStreak || 0
   });
@@ -93,7 +120,7 @@ export const saveFcmToken = async (req, res) => {
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.SUCCESS.FCM_TOKEN_SAVED });
 };
 
-// Refresh access token via refresh token
+// Refresh access token via refresh token with rotation
 export const refreshUserToken = async (req, res) => {
   const refreshToken = req.cookies[AUTH_COOKIES.REFRESH_TOKEN];
 
@@ -109,7 +136,27 @@ export const refreshUserToken = async (req, res) => {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: MESSAGES.ERROR.UNAUTHORIZED });
     }
 
-    generateTokens(res, user._id);
+    if (user.isBlocked) {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        message: user.blockedReason
+          ? `Account suspended: ${user.blockedReason}`
+          : 'Account suspended by administrator'
+      });
+    }
+
+    // Enforce session revocation and single-family token rotation
+    if (
+      decoded.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined &&
+      decoded.tokenVersion !== user.tokenVersion
+    ) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        message: 'Session invalidated. Please log in again.'
+      });
+    }
+
+    // Issue brand-new access token and refresh token (Token Rotation)
+    generateTokens(res, user._id, user.tokenVersion || 0);
     res.status(STATUS_CODES.OK).json({ message: 'Token refreshed' });
   } catch (error) {
     res.status(STATUS_CODES.UNAUTHORIZED).json({ message: MESSAGES.ERROR.UNAUTHORIZED });

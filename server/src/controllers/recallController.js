@@ -1,4 +1,5 @@
 import RecallItem from '../models/recallItem.js';
+import SystemConfig from '../models/systemConfig.js';
 import { aiQueue } from '../workers/aiWorker.js';
 import { calculateNextReview } from '../services/spacedRepetitionService.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
@@ -19,6 +20,49 @@ export const createRecallItem = async (req, res) => {
   const { selectedText, sourceUrl } = req.body;
   const userId = req.user._id;
   const cleanSourceUrl = normalizeUrl(sourceUrl);
+
+  // --- Dynamic Guardrails ---
+  const config = await SystemConfig.getSettings();
+
+  // Guardrail 1: Maintenance Mode Kill Switch
+  if (config.maintenanceMode && req.user.role !== 'admin') {
+    return res.status(503).json({
+      message: config.maintenanceMessage || 'Ormayundo is temporarily undergoing maintenance.'
+    });
+  }
+
+  // Guardrail 2: AI Generation Emergency Pause
+  if (!config.aiEnabled && req.user.role !== 'admin') {
+    return res.status(503).json({
+      message: 'AI flashcard generation is temporarily paused by platform administrator.'
+    });
+  }
+
+  // Guardrail 3: Maximum Input Text Length
+  const maxChars = config.maxTextLength || 4000;
+  if (selectedText && selectedText.length > maxChars) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({
+      message: `Selected text exceeds maximum allowed length of ${maxChars} characters.`
+    });
+  }
+
+  // Guardrail 4: Per-User Daily Creation Quota
+  if (req.user.role !== 'admin') {
+    const dailyLimit = req.user.customDailyLimit ?? config.dailyCardLimit ?? 30;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const cardsCreatedToday = await RecallItem.countDocuments({
+      userId,
+      createdAt: { $gte: startOfToday }
+    });
+
+    if (cardsCreatedToday >= dailyLimit) {
+      return res.status(429).json({
+        message: `Daily card limit reached (${dailyLimit}/day). Your limit resets at midnight.`
+      });
+    }
+  }
 
   // Update user study streak
   const now = new Date();

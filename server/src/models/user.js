@@ -5,7 +5,10 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        lowercase: true,
+        trim: true,
+        index: true
     },
     password: {
         type: String,
@@ -28,6 +31,30 @@ const userSchema = new mongoose.Schema({
     },
     lastAddedDate: {
         type: Date
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
+    blockedReason: {
+        type: String,
+        default: ''
+    },
+    blockedAt: {
+        type: Date
+    },
+    customDailyLimit: {
+        type: Number,
+        default: null
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0
     }
 }, { timestamps: true });
 

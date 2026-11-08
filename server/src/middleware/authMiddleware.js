@@ -25,5 +25,25 @@ export const protect = async (req, res, next) => {
     throw new Error('User no longer exists');
   }
 
+  // Reject blocked/suspended users immediately
+  if (req.user.isBlocked) {
+    res.status(STATUS_CODES.FORBIDDEN);
+    throw new Error(
+      req.user.blockedReason
+        ? `Account suspended: ${req.user.blockedReason}`
+        : 'Account suspended by administrator'
+    );
+  }
+
+  // Enforce session revocation and single-family token rotation
+  if (
+    decoded.tokenVersion !== undefined &&
+    req.user.tokenVersion !== undefined &&
+    decoded.tokenVersion !== req.user.tokenVersion
+  ) {
+    res.status(STATUS_CODES.UNAUTHORIZED);
+    throw new Error('Session invalidated or expired. Please log in again.');
+  }
+
   next();
 };
