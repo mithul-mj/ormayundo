@@ -13,12 +13,64 @@ export const flashcardsApi = {
 
   getFlashcards: async () => {
     const res = await apiClient.get('/recall');
-    return res.data;
+    return Array.isArray(res.data) ? res.data : (res.data?.cards || []);
   },
 
   getFlashcardsWithDecks: async () => {
-    const res = await apiClient.get('/recall?includeDecks=true');
-    return res.data;
+    try {
+      const res = await apiClient.get('/recall?includeDecks=true');
+      const data = res.data;
+
+      // Format 1: Backend returns { cards: [...], decks: [...] }
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const cards = Array.isArray(data.cards)
+          ? data.cards
+          : (Array.isArray(data.data) ? data.data : []);
+        let decks = Array.isArray(data.decks) ? data.decks : [];
+
+        if (decks.length === 0) {
+          try {
+            const decksRes = await apiClient.get('/decks');
+            if (Array.isArray(decksRes.data)) decks = decksRes.data;
+          } catch {
+            // ignore decks fetch error
+          }
+        }
+        return { cards, decks };
+      }
+
+      // Format 2: Backend returns a flat array of cards directly [...]
+      if (Array.isArray(data)) {
+        let decks = [];
+        try {
+          const decksRes = await apiClient.get('/decks');
+          if (Array.isArray(decksRes.data)) decks = decksRes.data;
+        } catch {
+          // ignore decks fetch error
+        }
+        return { cards: data, decks };
+      }
+
+      return { cards: [], decks: [] };
+    } catch {
+      // Fallback: parallel requests to /recall and /decks
+      const [cardsRes, decksRes] = await Promise.allSettled([
+        apiClient.get('/recall'),
+        apiClient.get('/decks'),
+      ]);
+
+      const rawCards = cardsRes.status === 'fulfilled' ? cardsRes.value.data : [];
+      const rawDecks = decksRes.status === 'fulfilled' ? decksRes.value.data : [];
+
+      const cards = Array.isArray(rawCards)
+        ? rawCards
+        : (Array.isArray(rawCards?.cards) ? rawCards.cards : (Array.isArray(rawCards?.data) ? rawCards.data : []));
+      const decks = Array.isArray(rawDecks)
+        ? rawDecks
+        : (Array.isArray(rawDecks?.decks) ? rawDecks.decks : []);
+
+      return { cards, decks };
+    }
   },
 
   createDeck: async (payload) => {
@@ -59,7 +111,7 @@ export const flashcardsApi = {
 // ==========================================
 export function useFlashcardsDataQuery() {
   return useQuery({
-    queryKey: queryKeys.flashcards.all,
+    queryKey: queryKeys.flashcards.data(),
     queryFn: flashcardsApi.getFlashcardsWithDecks,
   });
 }

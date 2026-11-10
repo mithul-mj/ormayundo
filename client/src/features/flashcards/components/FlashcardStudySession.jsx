@@ -24,8 +24,19 @@ export default function FlashcardStudySession({
   const { data: flashcardsData } = useFlashcardsDataQuery();
   const reviewMutation = useReviewCardMutation();
 
-  const cards = useMemo(() => propCards || flashcardsData?.cards || [], [propCards, flashcardsData?.cards]);
-  const decks = useMemo(() => propDecks || flashcardsData?.decks || [], [propDecks, flashcardsData?.decks]);
+  const cards = useMemo(() => {
+    if (propCards && Array.isArray(propCards)) return propCards;
+    if (Array.isArray(flashcardsData)) return flashcardsData;
+    if (Array.isArray(flashcardsData?.cards)) return flashcardsData.cards;
+    if (Array.isArray(flashcardsData?.data)) return flashcardsData.data;
+    return [];
+  }, [propCards, flashcardsData]);
+
+  const decks = useMemo(() => {
+    if (propDecks && Array.isArray(propDecks)) return propDecks;
+    if (Array.isArray(flashcardsData?.decks)) return flashcardsData.decks;
+    return [];
+  }, [propDecks, flashcardsData]);
 
   const [selectedDeckFilter] = useState(initialDeck);
   const [isFlipped, setIsFlipped] = useState(false);

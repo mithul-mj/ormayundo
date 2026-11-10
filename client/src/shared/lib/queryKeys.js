@@ -9,6 +9,7 @@ export const queryKeys = {
   },
   flashcards: {
     all: ['flashcards'],
+    data: () => ['flashcards', 'data'],
     list: (filters = {}) => ['flashcards', 'list', filters],
   },
   decks: {

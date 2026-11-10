@@ -204,12 +204,12 @@ export const getAllItems = async (req, res) => {
       decks = [defaultDeck];
     }
 
-    res.set('Cache-Control', 'private, max-age=30');
+    res.set('Cache-Control', 'no-cache');
     return res.status(STATUS_CODES.OK).json({ cards: items, decks });
   }
 
   const items = await RecallItem.find(query).sort({ createdAt: -1 });
-  res.set('Cache-Control', 'private, max-age=30');
+  res.set('Cache-Control', 'no-cache');
   res.status(STATUS_CODES.OK).json(items);
 };
 

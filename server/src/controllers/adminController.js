@@ -4,6 +4,7 @@ import Deck from '../models/deck.js';
 import TokenUsage from '../models/tokenUsage.js';
 import SystemConfig from '../models/systemConfig.js';
 import SystemIncident from '../models/systemIncident.js';
+import { clearSlotCooldown } from '../services/apiKeyManager.js';
 import { aiQueue } from '../workers/aiWorker.js';
 import { sendPushNotification } from '../services/pushService.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
@@ -685,6 +686,26 @@ export const updateSystemConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('[Admin] updateSystemConfig error:', error);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });
+  }
+};
+
+// 11b. Reset / Clear Cooldown for an API Key Slot
+export const resetSlotCooldown = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+    if (!slotId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Slot ID is required' });
+    }
+
+    await clearSlotCooldown(slotId);
+
+    res.status(STATUS_CODES.OK).json({
+      message: `Cooldown reset successfully for slot "${slotId}"`,
+      slotId
+    });
+  } catch (error) {
+    console.error('[Admin] resetSlotCooldown error:', error);
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };

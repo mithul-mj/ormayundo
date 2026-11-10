@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Brain } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { themeColors } from '../../shared/theme';
@@ -38,10 +38,21 @@ const FlashcardManager = ({ onOpenStudySession }) => {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedDeck]);
 
-  // Consolidated 1-call query for both flashcards and deck taxonomy
+  // Consolidated query for both flashcards and deck taxonomy
   const { data: flashcardsData, isLoading: dataLoading } = useFlashcardsDataQuery();
-  const cards = flashcardsData?.cards || [];
-  const decks = flashcardsData?.decks || [];
+
+  // Robust normalization: handles { cards: [...] }, flat array [...], or nested payload
+  const cards = useMemo(() => {
+    if (Array.isArray(flashcardsData)) return flashcardsData;
+    if (Array.isArray(flashcardsData?.cards)) return flashcardsData.cards;
+    if (Array.isArray(flashcardsData?.data)) return flashcardsData.data;
+    return [];
+  }, [flashcardsData]);
+
+  const decks = useMemo(() => {
+    if (Array.isArray(flashcardsData?.decks)) return flashcardsData.decks;
+    return [];
+  }, [flashcardsData]);
 
   const createDeckMutation = useCreateDeckMutation({
     onSuccess: (newDeck) => {
