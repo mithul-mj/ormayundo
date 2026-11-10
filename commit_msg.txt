@@ -1,6 +1,0 @@
-fix: add resetSlotCooldown export to adminController and normalize flashcards response
-
-- Exported resetSlotCooldown in adminController to resolve Render backend startup SyntaxError
-- Normalized flashcards payload in flashcardsApi and FlashcardManager to support both array and object formats
-- Added dedicated flashcards.data query key to prevent cache collision
-- Switched recall list endpoint Cache-Control to no-cache to avoid stale HTTP caching
