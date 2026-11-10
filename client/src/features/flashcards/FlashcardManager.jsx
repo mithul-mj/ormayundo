@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { RefreshCw } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { API_URL } from '../../shared/config';
 import { themeColors } from '../../shared/theme';
+import {
+  useFlashcardsDataQuery,
+  useCreateDeckMutation,
+  useUpdateCardMutation,
+  useDeleteCardMutation,
+  useWipeAllCardsMutation,
+  useDeleteDeckMutation,
+} from './api/flashcardsApi';
 import {
   DeckFilterBar,
   NewDeckModal,
   SearchBar,
   FlashcardCard,
   Pagination,
+  FlashcardsSkeleton,
 } from './components';
 
 const CARDS_PER_PAGE = 5;
 
-const FlashcardManager = () => {
-  const [cards, setCards] = useState([]);
-  const [decks, setDecks] = useState([]);
+const FlashcardManager = ({ onOpenStudySession }) => {
   const [selectedDeck, setSelectedDeck] = useState('All');
-  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ question: '', selectedText: '', deck: 'General' });
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,43 +38,14 @@ const FlashcardManager = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedDeck]);
 
-  // Initial data load
-  useEffect(() => {
-    let ignore = false;
-    async function startFetching() {
-      try {
-        const [decksRes, cardsRes] = await Promise.all([
-          axios.get(`${API_URL}/decks`, { withCredentials: true }),
-          axios.get(`${API_URL}/recall`, { withCredentials: true }),
-        ]);
-        if (!ignore) {
-          setDecks(decksRes.data);
-          setCards(cardsRes.data);
-        }
-      } catch (error) {
-        console.error('Failed to load initial data', error);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    startFetching();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  // Consolidated 1-call query for both flashcards and deck taxonomy
+  const { data: flashcardsData, isLoading: dataLoading } = useFlashcardsDataQuery();
+  const cards = flashcardsData?.cards || [];
+  const decks = flashcardsData?.decks || [];
 
-  const handleCreateDeck = async (e) => {
-    e.preventDefault();
-    if (newDeckName.trim().length < 3) return;
-
-    try {
-      const res = await axios.post(
-        `${API_URL}/decks`,
-        { name: newDeckName.trim(), color: newDeckColor },
-        { withCredentials: true }
-      );
-      setDecks([...decks, res.data]);
-      setSelectedDeck(res.data.name);
+  const createDeckMutation = useCreateDeckMutation({
+    onSuccess: (newDeck) => {
+      setSelectedDeck(newDeck.name);
       setNewDeckName('');
       setNewDeckColor('#6366f1');
       setShowDeckInput(false);
@@ -78,17 +53,79 @@ const FlashcardManager = () => {
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: `Deck "${res.data.name}" created!`,
+        title: `Deck "${newDeck.name}" created!`,
         showConfirmButton: false,
         timer: 2000,
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       Swal.fire({
         icon: 'error',
         title: 'Failed to create deck',
-        text: error.response?.data?.message || 'Error creating deck',
+        text: error.extractedMessage || 'Error creating deck',
       });
-    }
+    },
+  });
+
+  const updateCardMutation = useUpdateCardMutation({
+    onSuccess: () => {
+      setEditingId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to edit card', error);
+    },
+  });
+
+  const deleteCardMutation = useDeleteCardMutation({
+    onSuccess: () => {
+      Swal.fire({
+        title: 'Deleted!',
+        text: 'Your flashcard has been deleted.',
+        icon: 'success',
+        confirmButtonColor: themeColors.brand,
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl font-bold px-6 py-2',
+          cancelButton: 'rounded-xl font-bold px-6 py-2',
+        },
+      });
+    },
+  });
+
+  const wipeAllMutation = useWipeAllCardsMutation({
+    onSuccess: () => {
+      Swal.fire({
+        title: 'Wiped!',
+        text: 'All your flashcards have been deleted.',
+        icon: 'success',
+        confirmButtonColor: themeColors.brand,
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl font-bold px-6 py-2',
+          cancelButton: 'rounded-xl font-bold px-6 py-2',
+        },
+      });
+    },
+  });
+
+  const deleteDeckMutation = useDeleteDeckMutation({
+    onSuccess: (deletedDeck) => {
+      if (selectedDeck === deletedDeck.name) setSelectedDeck('All');
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Deck "${deletedDeck.name}" deleted`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+    },
+  });
+
+  const handleCreateDeck = (e) => {
+    e.preventDefault();
+    if (newDeckName.trim().length < 3) return;
+    createDeckMutation.mutate({ name: newDeckName.trim(), color: newDeckColor });
   };
 
   const handleDelete = async (id) => {
@@ -101,85 +138,38 @@ const FlashcardManager = () => {
       cancelButtonColor: '#9CA3AF',
       confirmButtonText: 'Yes, delete it!',
       customClass: {
-        popup: 'rounded-3xl',
+        popup: 'rounded-2xl',
         confirmButton: 'rounded-xl font-bold px-6 py-2',
         cancelButton: 'rounded-xl font-bold px-6 py-2',
       },
     });
 
-    if (!result.isConfirmed) return;
-
-    try {
-      await axios.delete(`${API_URL}/recall/${id}`, { withCredentials: true });
-      setCards(cards.filter((c) => c._id !== id));
-      Swal.fire({
-        title: 'Deleted!',
-        text: 'Your flashcard has been deleted.',
-        icon: 'success',
-        confirmButtonColor: themeColors.brand,
-        customClass: {
-          popup: 'rounded-3xl',
-          confirmButton: 'rounded-xl font-bold px-6 py-2',
-        },
-      });
-    } catch (error) {
-      console.error('Failed to delete card', error);
-      Swal.fire({
-        title: 'Error!',
-        text: 'Failed to delete flashcard.',
-        icon: 'error',
-        confirmButtonColor: themeColors.brand,
-        customClass: {
-          popup: 'rounded-3xl',
-          confirmButton: 'rounded-xl font-bold px-6 py-2',
-        },
-      });
+    if (result.isConfirmed) {
+      deleteCardMutation.mutate(id);
     }
   };
 
   const handleDeleteAll = async () => {
+    const isFiltered = selectedDeck !== 'All';
     const result = await Swal.fire({
-      title: 'Wipe All Flashcards?',
-      text: 'Are you sure you want to delete EVERY flashcard? This cannot be undone!',
+      title: isFiltered ? 'Wipe Entire Flashcard Library?' : 'Wipe All Flashcards?',
+      html: isFiltered
+        ? `Warning: You are currently viewing deck <b>"${selectedDeck}"</b>, but "Wipe All" will delete <b>ALL ${cards.length} flashcards across all decks</b>. This action is irreversible!`
+        : `Are you sure you want to delete all <b>${cards.length} flashcards</b>? This cannot be undone!`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: themeColors.brand,
+      confirmButtonColor: '#EF4444',
       cancelButtonColor: '#9CA3AF',
-      confirmButtonText: 'Yes, wipe them all!',
+      confirmButtonText: 'Yes, wipe everything!',
       customClass: {
-        popup: 'rounded-3xl',
+        popup: 'rounded-2xl',
         confirmButton: 'rounded-xl font-bold px-6 py-2',
         cancelButton: 'rounded-xl font-bold px-6 py-2',
       },
     });
 
-    if (!result.isConfirmed) return;
-
-    try {
-      await axios.delete(`${API_URL}/recall/all`, { withCredentials: true });
-      setCards([]);
-      Swal.fire({
-        title: 'Wiped!',
-        text: 'All your flashcards have been deleted.',
-        icon: 'success',
-        confirmButtonColor: themeColors.brand,
-        customClass: {
-          popup: 'rounded-3xl',
-          confirmButton: 'rounded-xl font-bold px-6 py-2',
-        },
-      });
-    } catch (error) {
-      console.error('Failed to wipe cards', error);
-      Swal.fire({
-        title: 'Error!',
-        text: 'Failed to delete all flashcards.',
-        icon: 'error',
-        confirmButtonColor: themeColors.brand,
-        customClass: {
-          popup: 'rounded-3xl',
-          confirmButton: 'rounded-xl font-bold px-6 py-2',
-        },
-      });
+    if (result.isConfirmed) {
+      wipeAllMutation.mutate();
     }
   };
 
@@ -195,35 +185,14 @@ const FlashcardManager = () => {
       cancelButtonColor: '#9CA3AF',
       confirmButtonText: 'Yes, delete deck',
       customClass: {
-        popup: 'rounded-3xl',
+        popup: 'rounded-2xl',
         confirmButton: 'rounded-xl font-bold px-6 py-2',
         cancelButton: 'rounded-xl font-bold px-6 py-2',
       },
     });
 
-    if (!result.isConfirmed) return;
-
-    try {
-      await axios.delete(`${API_URL}/decks/${deckToDelete._id}`, {
-        withCredentials: true,
-      });
-      setDecks(decks.filter((d) => d._id !== deckToDelete._id));
-      if (selectedDeck === deckToDelete.name) setSelectedDeck('All');
-      setCards(
-        cards.map((c) =>
-          c.deck === deckToDelete.name ? { ...c, deck: 'General' } : c
-        )
-      );
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: `Deck "${deckToDelete.name}" deleted`,
-        showConfirmButton: false,
-        timer: 2000,
-      });
-    } catch (error) {
-      console.error('Failed to delete deck', error);
+    if (result.isConfirmed) {
+      deleteDeckMutation.mutate(deckToDelete);
     }
   };
 
@@ -236,16 +205,8 @@ const FlashcardManager = () => {
     });
   };
 
-  const saveEdit = async (id) => {
-    try {
-      const res = await axios.put(`${API_URL}/recall/${id}`, editForm, {
-        withCredentials: true,
-      });
-      setCards(cards.map((c) => (c._id === id ? res.data : c)));
-      setEditingId(null);
-    } catch (error) {
-      console.error('Failed to edit card', error);
-    }
+  const saveEdit = (id) => {
+    updateCardMutation.mutate({ id, data: editForm });
   };
 
   const filteredCards = cards.filter((c) => {
@@ -270,13 +231,46 @@ const FlashcardManager = () => {
     return found?.color || '#FF9532';
   };
 
+  const isLoading = dataLoading && cards.length === 0;
+
+  const dueCardsCount = cards.filter(
+    (c) => !c.nextReviewAt || new Date(c.nextReviewAt) <= new Date()
+  ).length;
+
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
+        <FlashcardsSkeleton />
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 p-8">
-      <SearchBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onWipeAll={handleDeleteAll}
-      />
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
+      {/* Top Action Bar with Search & Study CTA */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex-1">
+          <SearchBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        </div>
+
+        {cards.length > 0 && onOpenStudySession && (
+          <button
+            type="button"
+            onClick={onOpenStudySession}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95 shrink-0"
+          >
+            <Brain className="w-4 h-4" />
+            <span>
+              {dueCardsCount > 0
+                ? `Study Due Cards (${dueCardsCount})`
+                : `Practice All Cards (${cards.length})`}
+            </span>
+          </button>
+        )}
+      </div>
 
       <DeckFilterBar
         cards={cards}
@@ -300,50 +294,63 @@ const FlashcardManager = () => {
         }}
       />
 
-      {loading ? (
-        <div className="flex justify-center p-20">
-          <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {filteredCards.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-              <p className="text-gray-500 font-medium">
-                No flashcards found in this deck.
-              </p>
-            </div>
-          )}
+      <div className="grid gap-6 min-w-0 max-w-full">
+        {filteredCards.length === 0 && (
+          <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-xs space-y-2.5 px-4">
+            <p className="text-neutral-900 font-bold text-base">
+              {selectedDeck !== 'All'
+                ? `No flashcards in deck "${selectedDeck}"`
+                : searchQuery
+                ? `No flashcards matching "${searchQuery}"`
+                : 'No flashcards created yet'}
+            </p>
+            <p className="text-neutral-500 text-xs max-w-sm mx-auto">
+              {selectedDeck !== 'All'
+                ? 'Highlight text on any webpage with the Ormayundo extension to generate questions for this deck.'
+                : 'Highlight notes on articles, documentation, or textbooks to automatically create active recall cards.'}
+            </p>
+          </div>
+        )}
 
-          {currentCards.map((card) => (
-            <FlashcardCard
-              key={card._id}
-              card={card}
-              decks={decks}
-              isEditing={editingId === card._id}
-              editForm={editForm}
-              openDeckDropdown={openDeckDropdown}
-              onStartEditing={startEditing}
-              onCancelEditing={() => setEditingId(null)}
-              onSaveEdit={saveEdit}
-              onDelete={handleDelete}
-              onEditFormChange={setEditForm}
-              onToggleDeckDropdown={(id) =>
-                setOpenDeckDropdown(openDeckDropdown === id ? null : id)
-              }
-              getDeckColor={getDeckColor}
-            />
-          ))}
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+        {currentCards.map((card) => (
+          <FlashcardCard
+            key={card._id}
+            card={card}
+            decks={decks}
+            isEditing={editingId === card._id}
+            editForm={editForm}
+            openDeckDropdown={openDeckDropdown}
+            onStartEditing={startEditing}
+            onCancelEditing={() => setEditingId(null)}
+            onSaveEdit={saveEdit}
+            onDelete={handleDelete}
+            onEditFormChange={setEditForm}
+            onToggleDeckDropdown={(id) =>
+              setOpenDeckDropdown(openDeckDropdown === id ? null : id)
+            }
+            getDeckColor={getDeckColor}
           />
-        </div>
-      )}
+        ))}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+
+        {cards.length > 0 && (
+          <div className="pt-8 pb-4 text-center border-t border-gray-100">
+            <button
+              onClick={handleDeleteAll}
+              className="text-xs font-semibold text-neutral-400 hover:text-red-600 transition-colors cursor-pointer py-1.5 px-3 rounded-full hover:bg-red-50"
+            >
+              Reset / Delete All Flashcards
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default FlashcardManager;
-

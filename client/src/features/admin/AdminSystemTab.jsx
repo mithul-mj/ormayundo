@@ -12,10 +12,10 @@ import {
   Radio,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { UI_TIMERS, TIME_CONSTANTS } from '../../shared/constants';
+import { UI_TIMERS } from '../../shared/constants';
 
 export default function AdminSystemTab({
-  systemHealth,
+  stats,
   incidents = [],
   onRefresh,
   onRetryFailedJobs,
@@ -106,27 +106,20 @@ export default function AdminSystemTab({
     }
   };
 
-  const memory = systemHealth?.memory || { rssMb: 0, heapUsedMb: 0, heapTotalMb: 0 };
-  const queue = systemHealth?.queue || {};
-  const uptimeMinutes = systemHealth?.uptimeSeconds
-    ? Math.floor(systemHealth.uptimeSeconds / TIME_CONSTANTS.SECONDS_IN_MINUTE)
-    : 0;
-  const uptimeHours = Math.floor(uptimeMinutes / TIME_CONSTANTS.MINUTES_IN_HOUR);
-
+  const queue = stats?.queue || {};
+  const totalRegisteredDevices = stats?.notifications?.totalRegisteredDevices || 0;
   const unresolvedIncidents = incidents.filter((i) => i.status === 'unresolved');
 
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Real-time System Incidents & Failure Alert Center */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+      <div className="bg-white p-5 sm:p-6 lg:p-7 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
+            <AlertTriangle className="w-5 h-5 text-neutral-900 shrink-0" />
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-ink">Failure Incidents & Alerts</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-base sm:text-lg text-ink">Failure Incidents &amp; Alerts</h3>
                 {unresolvedIncidents.length > 0 ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200 animate-pulse">
                     {unresolvedIncidents.length} Active
@@ -287,23 +280,31 @@ export default function AdminSystemTab({
       </div>
 
       {/* 2-Column Grid: Queue & Push Broadcast */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* BullMQ Worker & Queue Controls */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand">
-                  <Activity className="w-5 h-5" />
-                </div>
+                <Activity className="w-5 h-5 text-neutral-900 shrink-0" />
                 <div>
                   <h3 className="font-bold text-base text-ink">BullMQ AI Queue</h3>
-                  <p className="text-xs text-muted">Background workers on Redis Cloud</p>
+                  <p className="text-xs text-muted">Background Worker Queue Engine</p>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Online
+              <span className={[
+                'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0',
+                queue?.waiting !== undefined || queue?.completed !== undefined
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200',
+              ].join(' ')}>
+                <span className={[
+                  'w-1.5 h-1.5 rounded-full',
+                  queue?.waiting !== undefined || queue?.completed !== undefined
+                    ? 'bg-emerald-500 animate-pulse'
+                    : 'bg-amber-500',
+                ].join(' ')} />
+                {queue?.waiting !== undefined || queue?.completed !== undefined ? 'Online' : 'Standby'}
               </span>
             </div>
 
@@ -354,20 +355,18 @@ export default function AdminSystemTab({
         </div>
 
         {/* Firebase FCM Broadcast Notification Center */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200/80 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand">
-                <Radio className="w-5 h-5" />
-              </div>
+              <Radio className="w-5 h-5 text-neutral-900 shrink-0" />
               <div>
                 <h3 className="font-bold text-base text-ink">Broadcast Push</h3>
                 <p className="text-xs text-muted">Firebase Cloud Messaging</p>
               </div>
             </div>
-            <span className="px-3 py-1 rounded-full bg-surface border border-divider text-xs font-semibold text-muted flex items-center gap-1.5">
+            <span className="px-3 py-1 rounded-full bg-surface border border-divider text-xs font-semibold text-muted flex items-center gap-1.5 shrink-0">
               <Smartphone className="w-3.5 h-3.5 text-brand" />
-              {systemHealth?.notifications?.totalRegisteredDevices || 0} Devices
+              {totalRegisteredDevices} Devices
             </span>
           </div>
 
@@ -410,46 +409,47 @@ export default function AdminSystemTab({
         </div>
       </div>
 
-      {/* Infrastructure & Runtime Diagnostics */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+      {/* Infrastructure & Service Health */}
+      <div className="bg-white p-5 sm:p-6 lg:p-7 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-2xl bg-surface border border-divider flex items-center justify-center text-ink">
-            <Server className="w-5 h-5" />
-          </div>
+          <Server className="w-5 h-5 text-neutral-900 shrink-0" />
           <div>
-            <h3 className="font-bold text-base text-ink">Runtime & Environment Health</h3>
-            <p className="text-xs text-muted">Node.js server cluster and persistent connections</p>
+            <h3 className="font-bold text-base text-ink">Platform Core Services</h3>
+            <p className="text-xs text-muted">Backend microservices and persistent infrastructure status</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
           <div className="sm:border-r sm:border-divider/60 sm:pr-6">
-            <span className="text-xs text-muted font-medium block mb-1">Server Process Uptime</span>
-            <div className="text-2xl font-black text-ink">
-              {uptimeHours > 0
-                ? `${uptimeHours}h ${uptimeMinutes % TIME_CONSTANTS.MINUTES_IN_HOUR}m`
-                : `${uptimeMinutes}m`}
+            <span className="text-xs text-muted font-medium block mb-1">Database Cluster</span>
+            <div className="text-2xl font-black text-emerald-600 flex items-center gap-2">
+              <HardDrive className="w-5 h-5" />
+              <span>Connected</span>
             </div>
             <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-1.5">
-              <CheckCircle className="w-3.5 h-3.5" /> Continuous Process
+              <CheckCircle className="w-3.5 h-3.5" /> Primary Replica Pool
             </span>
           </div>
 
           <div className="sm:border-r sm:border-divider/60 sm:pr-6">
-            <span className="text-xs text-muted font-medium block mb-1">Memory Allocation</span>
-            <div className="text-2xl font-black text-ink">{memory.heapUsedMb} MB</div>
+            <span className="text-xs text-muted font-medium block mb-1">Worker Queue Engine</span>
+            <div className="text-2xl font-black text-emerald-600 flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              <span>Operational</span>
+            </div>
             <span className="text-[11px] text-muted block mt-1.5">
-              Heap Total: {memory.heapTotalMb} MB · RSS: {memory.rssMb} MB
+              BullMQ Redis · {queue.waiting || 0} waiting · {queue.active || 0} active
             </span>
           </div>
 
           <div>
-            <span className="text-xs text-muted font-medium block mb-1">Database & Redis</span>
+            <span className="text-xs text-muted font-medium block mb-1">Push Gateway</span>
             <div className="text-2xl font-black text-emerald-600 flex items-center gap-2">
-              <HardDrive className="w-5 h-5" /> Connected
+              <Smartphone className="w-5 h-5" />
+              <span>Online</span>
             </div>
             <span className="text-[11px] text-muted block mt-1.5">
-              MongoDB Atlas Pool + Redis Cloud
+              FCM Service · {totalRegisteredDevices} registered clients
             </span>
           </div>
         </div>

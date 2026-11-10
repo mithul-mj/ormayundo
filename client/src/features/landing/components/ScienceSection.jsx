@@ -1,65 +1,74 @@
+import ModernCard from './ModernCard';
+import ScrollReveal from './ScrollReveal';
+
+const intervals = [
+  {
+    rating: 'Forgot',
+    time: '<1 min',
+    desc: "Review right away so you don't lose the concept.",
+    color: 'rose',
+    textColor: 'text-rose-600',
+  },
+  {
+    rating: 'Hard',
+    time: '2 Days',
+    desc: 'Shown again soon to help you master tricky ideas.',
+    color: 'orange',
+    textColor: 'text-orange-600',
+  },
+  {
+    rating: 'Good',
+    time: '6 Days',
+    desc: 'Pushed out further as your memory gets stronger.',
+    color: 'blue',
+    textColor: 'text-blue-600',
+  },
+  {
+    rating: 'Easy',
+    time: '8+ Days',
+    desc: 'Saved for the long term with extended review gaps.',
+    color: 'emerald',
+    textColor: 'text-emerald-600',
+  },
+];
+
 export default function ScienceSection() {
   return (
-    <section id="science" className="py-20 bg-white">
+    <section id="science" className="py-10 sm:py-20 md:py-24 bg-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-8">
-        <div className="text-center mb-12">
-          <span className={
-      [
-        'text-[11px] font-bold text-brand tracking-widest uppercase bg-brand/10',
-        'px-3.5 py-1.5 rounded-full'
-      ].join(' ')
-    }>
-            Cognitive Science
+        <ScrollReveal className="text-center mb-8 sm:mb-14">
+          <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-brand mb-2">
+            The Science
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight mt-3 mb-3">
-            SuperMemo SM-2 Spaced Repetition
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-neutral-950 tracking-tight mb-2 sm:mb-3">
+            Why Spaced Repetition Works
           </h2>
-          <p className="text-muted max-w-lg mx-auto text-sm sm:text-base">
-            Rote cramming fades in 48 hours. Spaced repetition recalculates the exact interval before
-            memory decay occurs.
+          <p className="text-neutral-600 max-w-lg mx-auto text-xs sm:text-base leading-relaxed">
+            Cramming fades within 48 hours. Spaced repetition tests you right before you are about to forget, locking knowledge in permanently.
           </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
-          <div className="p-6 rounded-3xl bg-surface border border-divider">
-            <span className="text-[11px] font-bold text-brand uppercase tracking-wider block mb-1">
-              Forgot
-            </span>
-            <span className="text-3xl font-extrabold text-ink">&lt;1 min</span>
-            <p className="text-xs text-muted mt-2">
-              Re-enters learning queue immediately to reset synaptic recall.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-3xl bg-surface border border-divider">
-            <span className="text-[11px] font-bold text-orange-500 uppercase tracking-wider block mb-1">
-              Hard
-            </span>
-            <span className="text-3xl font-extrabold text-ink">2 Days</span>
-            <p className="text-xs text-muted mt-2">
-              Conservative interval progression (~1.2x) for difficult cards.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-3xl bg-surface border border-divider">
-            <span className="text-[11px] font-bold text-blue-500 uppercase tracking-wider block mb-1">
-              Good
-            </span>
-            <span className="text-3xl font-extrabold text-ink">6 Days</span>
-            <p className="text-xs text-muted mt-2">
-              Standard SM-2 progression based on your card's Easiness Factor.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-3xl bg-surface border border-divider">
-            <span className="text-[11px] font-bold text-success uppercase tracking-wider block mb-1">
-              Easy
-            </span>
-            <span className="text-3xl font-extrabold text-ink">8 Days</span>
-            <p className="text-xs text-muted mt-2">
-              Applies a 1.3x Easy Bonus and elevates long-term card strength.
-            </p>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 text-center">
+          {intervals.map((item, idx) => (
+            <ScrollReveal key={item.rating} delay={idx * 70}>
+              <ModernCard
+                accentColor={item.color}
+                className="p-4 sm:p-6 flex flex-col justify-between h-full text-center"
+              >
+                <div>
+                  <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider block mb-1.5 ${item.textColor}`}>
+                    {item.rating}
+                  </span>
+                  <span className="text-xl sm:text-3xl font-extrabold text-neutral-950 tracking-tight">
+                    {item.time}
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-neutral-500 mt-2.5 sm:mt-3 leading-relaxed">
+                  {item.desc}
+                </p>
+              </ModernCard>
+            </ScrollReveal>
+          ))}
         </div>
       </div>
     </section>

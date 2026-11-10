@@ -1,15 +1,20 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { API_URL } from './shared/config';
+import { queryKeys } from './shared/lib/queryKeys';
 import { initWebPush } from './shared/services/firebase';
 import { DashboardNavbar } from './shared/components';
 import { ROUTES, APP_TABS } from './shared/constants';
+import { AnalyticsSkeleton } from './features/analytics/components';
+import { FlashcardsSkeleton } from './features/flashcards/components';
+import { useCurrentUserQuery, useLogoutMutation } from './features/auth/api/authApi';
 
 // Code-split feature domains for scalability and fast initial load
 const LandingPage = lazy(() => import('./features/landing'));
 const AnalyticsDashboard = lazy(() => import('./features/analytics'));
 const FlashcardManager = lazy(() => import('./features/flashcards'));
+const FlashcardStudySession = lazy(() => import('./features/flashcards/components/FlashcardStudySession'));
 const Auth = lazy(() => import('./features/auth'));
 const Privacy = lazy(() => import('./features/privacy'));
 const AdminPortal = lazy(() => import('./features/admin'));
@@ -23,16 +28,12 @@ function PageLoader() {
 }
 
 export default function App() {
+  const queryClient = useQueryClient();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [isStudySessionOpen, setIsStudySessionOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(() => (
     window.location.pathname === ROUTES.ADMIN ? APP_TABS.ADMIN : APP_TABS.DASHBOARD
   ));
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [announcement, setAnnouncement] = useState(null);
-  const [loading, setLoading] = useState(
-    () => window.location.pathname !== ROUTES.PRIVACY
-  );
 
   // Client-side navigation helper with browser history support
   const navigate = (path) => {
@@ -55,32 +56,18 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Check authentication status on startup using lightweight endpoint
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-        setUser(res.data);
-        setIsAuthenticated(true);
-        if (window.location.pathname === ROUTES.ADMIN && res.data?.role === 'admin') {
-          setActiveTab(APP_TABS.ADMIN);
-        }
-      } catch {
-        setUser(null);
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // TanStack Query for session & bundled announcement state
+  const { data: user, isLoading: authLoading } = useCurrentUserQuery({
+    enabled: currentPath !== ROUTES.PRIVACY,
+  });
 
-    if (window.location.pathname !== ROUTES.PRIVACY) {
-      checkAuth();
-      axios
-        .get(`${API_URL}/announcement`)
-        .then((res) => setAnnouncement(res.data))
-        .catch(() => {});
-    }
-  }, []);
+  const isAuthenticated = Boolean(user);
+
+  const logoutMutation = useLogoutMutation({
+    onSuccess: () => {
+      navigate('/');
+    },
+  });
 
   // Sync web push notification token when authenticated
   useEffect(() => {
@@ -89,22 +76,20 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (err) {
-      console.error('Logout error', err);
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
-      navigate('/');
-    }
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
-  if (loading) {
+  const handleLoginSuccess = (userData) => {
+    if (userData) {
+      queryClient.setQueryData(queryKeys.auth.me(), userData);
+    } else {
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+    }
+    navigate(ROUTES.APP);
+  };
+
+  if (authLoading && currentPath !== ROUTES.PRIVACY) {
     return <PageLoader />;
   }
 
@@ -122,16 +107,7 @@ export default function App() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Auth
-          onLoginSuccess={async () => {
-            try {
-              const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-              setUser(res.data);
-            } catch (err) {
-              console.error('Failed to load user profile on login:', err);
-            }
-            setIsAuthenticated(true);
-            navigate(ROUTES.APP);
-          }}
+          onLoginSuccess={handleLoginSuccess}
           onBack={() => navigate(ROUTES.HOME)}
         />
       </Suspense>
@@ -145,13 +121,9 @@ export default function App() {
         <AdminPortal
           user={user}
           onLoginSuccess={(adminUser) => {
-            setUser(adminUser);
-            setIsAuthenticated(true);
+            queryClient.setQueryData(queryKeys.auth.me(), adminUser);
           }}
-          onLogout={() => {
-            setUser(null);
-            setIsAuthenticated(false);
-          }}
+          onLogout={handleLogout}
           onNavigateHome={() => navigate(ROUTES.HOME)}
         />
       </Suspense>
@@ -164,16 +136,7 @@ export default function App() {
       return (
         <Suspense fallback={<PageLoader />}>
           <Auth
-            onLoginSuccess={async () => {
-              try {
-                const res = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-                setUser(res.data);
-              } catch (err) {
-                console.error('Failed to load user profile on login:', err);
-              }
-              setIsAuthenticated(true);
-              navigate(ROUTES.APP);
-            }}
+            onLoginSuccess={handleLoginSuccess}
             onBack={() => navigate(ROUTES.HOME)}
           />
         </Suspense>
@@ -181,7 +144,7 @@ export default function App() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 text-ink flex flex-col font-sans">
+      <div className="min-h-screen bg-[#FAFAFA] text-ink flex flex-col font-sans">
         <DashboardNavbar
           activeTab={activeTab}
           onSelectTab={(tab) => {
@@ -196,24 +159,50 @@ export default function App() {
           user={user}
         />
 
-        {announcement?.announcementActive && announcement?.announcementBanner && (
-          <div className="bg-brand text-white px-4 py-2 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs animate-fade-in">
-            <span>📢 Announcement:</span>
-            <span>{announcement.announcementBanner}</span>
-          </div>
+        {user?.announcement?.announcementActive && user?.announcement?.announcementBanner && (
+          <aside
+            aria-label="Platform Announcement"
+            className="bg-brand text-white text-xs sm:text-[13px] font-medium shadow-xs animate-fade-in border-b border-brand-dark/20"
+          >
+            <div className="max-w-6xl mx-auto px-4 py-2 sm:py-2.5 flex items-center justify-center gap-2 flex-wrap text-center leading-relaxed">
+              <span className="inline-flex items-center gap-1 font-bold bg-white/20 px-2.5 py-0.5 rounded-full text-[11px] uppercase tracking-wider shrink-0">
+                📢 Announcement
+              </span>
+              <span className="break-words max-w-4xl font-semibold">
+                {user.announcement.announcementBanner}
+              </span>
+            </div>
+          </aside>
         )}
 
         <main className="flex-1 animate-fade-in pb-12">
-          <Suspense fallback={<PageLoader />}>
-            {activeTab === APP_TABS.DASHBOARD ? (
-              <AnalyticsDashboard />
-            ) : activeTab === APP_TABS.MANAGE ? (
-              <FlashcardManager />
-            ) : (
-              <AnalyticsDashboard />
-            )}
-          </Suspense>
+          {activeTab === APP_TABS.DASHBOARD ? (
+            <Suspense fallback={<AnalyticsSkeleton />}>
+              <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
+            </Suspense>
+          ) : activeTab === APP_TABS.MANAGE ? (
+            <Suspense
+              fallback={
+                <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
+                  <FlashcardsSkeleton />
+                </div>
+              }
+            >
+              <FlashcardManager onOpenStudySession={() => setIsStudySessionOpen(true)} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<AnalyticsSkeleton />}>
+              <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
+            </Suspense>
+          )}
         </main>
+
+        {/* Global Interactive Flashcard Study Session Modal */}
+        {isStudySessionOpen && (
+          <Suspense fallback={null}>
+            <FlashcardStudySession onClose={() => setIsStudySessionOpen(false)} />
+          </Suspense>
+        )}
       </div>
     );
   }

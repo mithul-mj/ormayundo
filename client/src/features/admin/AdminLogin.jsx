@@ -56,12 +56,12 @@ export default function AdminLogin({ onLoginSuccess, onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center px-4 sm:px-6 py-12 relative">
+    <div className="min-h-screen bg-surface flex flex-col justify-center items-center px-4 sm:px-6 py-6 sm:py-12 relative">
       {/* Back button pill */}
       {onBack && (
         <button
           onClick={onBack}
-          className="absolute top-6 left-6 flex items-center gap-2 text-xs font-semibold text-muted hover:text-ink transition-colors cursor-pointer py-2 px-3.5 rounded-full bg-white border border-divider hover:shadow-xs"
+          className="self-start mb-6 sm:mb-0 sm:absolute sm:top-6 sm:left-6 flex items-center gap-2 text-xs font-semibold text-muted hover:text-ink transition-colors cursor-pointer py-2 px-3.5 rounded-full bg-white border border-divider hover:shadow-xs"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Ormayundo</span>
@@ -70,12 +70,10 @@ export default function AdminLogin({ onLoginSuccess, onBack }) {
 
       <div className="w-full max-w-md animate-fade-in">
         {/* Floating Airbnb Style Card */}
-        <div className="bg-white border border-divider rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+        <div className="bg-white border border-divider rounded-3xl p-6 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           {/* Header */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-brand/10 text-brand flex items-center justify-center mb-4 shadow-sm shadow-brand/15">
-              <Brain className="w-7 h-7" />
-            </div>
+            <Brain className="w-10 h-10 text-brand mb-4" />
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-200/60 text-brand text-[11px] font-bold tracking-wide uppercase mb-2">
               <ShieldCheck className="w-3.5 h-3.5" />

@@ -22,14 +22,20 @@ import {
   PAGINATION,
 } from '../../shared/constants';
 
+const getSourceDomain = (url) => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`);
+    return parsed.hostname.replace(/^www\./i, '') || url;
+  } catch {
+    return 'Source';
+  }
+};
+
 export default function AdminCardsTab({
-  cards = [],
-  pagination = {
-    total: 0,
-    page: PAGINATION.DEFAULT_PAGE,
-    limit: PAGINATION.TABLE_LIMIT,
-    pages: 1,
-  },
+  cards: directCards,
+  cardsData,
+  pagination: directPagination,
   onFetchCards,
   onUpdateCard,
   onDeleteCard,
@@ -39,6 +45,14 @@ export default function AdminCardsTab({
   onStatusFilterChange,
   onPageChange,
 }) {
+  const cards = directCards || cardsData?.cards || [];
+  const pagination = directPagination || cardsData?.pagination || {
+    total: cards.length,
+    page: PAGINATION.DEFAULT_PAGE,
+    limit: PAGINATION.TABLE_LIMIT,
+    pages: 1,
+  };
+
   const [editingCard, setEditingCard] = useState(null);
   const [editFormData, setEditFormData] = useState({
     question: '',
@@ -137,9 +151,9 @@ export default function AdminCardsTab({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       {/* Search & Filter Header */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <SearchInput
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -147,7 +161,7 @@ export default function AdminCardsTab({
           className="flex-1 max-w-md"
         />
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={statusFilter}
             onChange={onStatusFilterChange}
@@ -162,7 +176,7 @@ export default function AdminCardsTab({
 
           <button
             onClick={onFetchCards}
-            className="px-4 py-2 bg-surface hover:bg-surface-hover text-ink text-xs font-bold rounded-full border border-divider transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-full border border-gray-200 transition-colors cursor-pointer"
           >
             Refresh
           </button>
@@ -170,18 +184,18 @@ export default function AdminCardsTab({
       </div>
 
       {/* Cards Container */}
-      <div className="bg-white rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
         {/* Desktop Table View (hidden on mobile) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface/80 border-b border-divider text-muted uppercase font-bold tracking-wider text-[10px]">
+            <thead className="bg-neutral-50/80 border-b border-gray-200/70 text-neutral-500 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-4 px-6">Question & Highlight</th>
-                <th className="py-4 px-4">Student</th>
-                <th className="py-4 px-4">Deck</th>
-                <th className="py-4 px-4">Spaced Repetition</th>
-                <th className="py-4 px-4">Status</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-3.5 px-5">Question & Highlight</th>
+                <th className="py-3.5 px-4">Student</th>
+                <th className="py-3.5 px-4">Deck</th>
+                <th className="py-3.5 px-4">Spaced Repetition</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-divider/60">
@@ -206,7 +220,7 @@ export default function AdminCardsTab({
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[10px] text-brand hover:underline font-semibold"
                           >
-                            <span>Source Reference</span>
+                            <span>{getSourceDomain(card.sourceUrl)}</span>
                             <ExternalLink className="w-2.5 h-2.5" />
                           </a>
                         )}
@@ -320,7 +334,7 @@ export default function AdminCardsTab({
                 </p>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <PillBadge variant="neutral" size="xs">
                       {card.deck || 'General'}
                     </PillBadge>
@@ -341,7 +355,7 @@ export default function AdminCardsTab({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[10px] text-brand hover:underline font-semibold"
                     >
-                      <span>Source</span>
+                      <span>{getSourceDomain(card.sourceUrl)}</span>
                       <ExternalLink className="w-2.5 h-2.5" />
                     </a>
                   ) : <span />}
@@ -385,11 +399,11 @@ export default function AdminCardsTab({
         )}
 
         {/* Pagination Controls */}
-        <div className="p-4 border-t border-divider flex items-center justify-between text-xs text-muted">
+        <div className="p-4 border-t border-divider flex flex-col sm:flex-row gap-3 items-center justify-between text-xs text-muted">
           <span>
             Showing {cards.length} of {pagination.total} total flashcards
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               disabled={pagination.page <= 1}
               onClick={() => onPageChange(pagination.page - 1)}
@@ -442,7 +456,7 @@ export default function AdminCardsTab({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-ink mb-1.5">Deck Name</label>
               <input
@@ -467,7 +481,7 @@ export default function AdminCardsTab({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-ink mb-1.5">Interval (Days)</label>
               <input

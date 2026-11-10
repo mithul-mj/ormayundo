@@ -33,6 +33,9 @@ const userSchema = new mongoose.Schema({
     lastAddedDate: {
         type: Date
     },
+    lastStudiedDate: {
+        type: Date
+    },
     role: {
         type: String,
         enum: Object.values(USER_ROLES),

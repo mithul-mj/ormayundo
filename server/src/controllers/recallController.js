@@ -1,9 +1,11 @@
 import RecallItem from '../models/recallItem.js';
+import Deck from '../models/deck.js';
 import SystemConfig from '../models/systemConfig.js';
 import { aiQueue } from '../workers/aiWorker.js';
 import { calculateNextReview } from '../services/spacedRepetitionService.js';
+import { recordUserStudyActivity } from '../utils/streakHelper.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
-import { JOB_NAMES, MESSAGES } from '../utils/constants.js';
+import { JOB_NAMES, MESSAGES, DECKS } from '../utils/constants.js';
 
 // Clean and normalize URLs for grouping
 const normalizeUrl = (url) => {
@@ -64,23 +66,9 @@ export const createRecallItem = async (req, res) => {
     }
   }
 
-  // Update user study streak
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-  const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
-
-  if (lastAddedStr !== todayStr) {
-    req.user.currentStreak = lastAddedStr === yesterdayStr ? (req.user.currentStreak || 0) + 1 : 1;
-    if (req.user.currentStreak > (req.user.maxStreak || 0)) {
-      req.user.maxStreak = req.user.currentStreak;
-    }
-    req.user.lastAddedDate = now;
-    await req.user.save();
-  }
+  // Update user study streak with client timezone awareness
+  const clientTimezone = req.headers['x-timezone'] || req.body.timezone || req.query.timezone || 'UTC';
+  await recordUserStudyActivity(req.user, clientTimezone);
 
   // Push task to BullMQ Queue
   try {
@@ -161,6 +149,11 @@ export const reviewRecallItem = async (req, res) => {
   });
 
   await item.save();
+
+  // Sustain user study streak upon card review with client timezone awareness
+  const clientTimezone = req.headers['x-timezone'] || req.body.timezone || req.query.timezone || 'UTC';
+  await recordUserStudyActivity(req.user, clientTimezone);
+
   res.status(STATUS_CODES.OK).json(item);
 };
 
@@ -186,14 +179,37 @@ export const deleteAllRecallItems = async (req, res) => {
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.SUCCESS.ALL_RECALL_WIPED });
 };
 
-// Fetch all active items with optional URL filter
+// Fetch all active items with optional URL filter (and optional decks bundling)
 export const getAllItems = async (req, res) => {
   const query = { userId: req.user._id, status: 'active' };
   if (req.query.url) {
     const cleanUrl = normalizeUrl(req.query.url);
     if (cleanUrl) query.sourceUrl = cleanUrl;
   }
+
+  const includeDecks = req.query.includeDecks === 'true';
+
+  if (includeDecks) {
+    let [items, decks] = await Promise.all([
+      RecallItem.find(query).sort({ createdAt: -1 }),
+      Deck.find({ userId: req.user._id }).sort({ createdAt: 1 })
+    ]);
+
+    if (decks.length === 0) {
+      const defaultDeck = await Deck.create({
+        userId: req.user._id,
+        name: DECKS?.DEFAULT_NAME || 'General',
+        color: DECKS?.DEFAULT_COLOR || '#FF9532'
+      });
+      decks = [defaultDeck];
+    }
+
+    res.set('Cache-Control', 'private, max-age=30');
+    return res.status(STATUS_CODES.OK).json({ cards: items, decks });
+  }
+
   const items = await RecallItem.find(query).sort({ createdAt: -1 });
+  res.set('Cache-Control', 'private, max-age=30');
   res.status(STATUS_CODES.OK).json(items);
 };
 

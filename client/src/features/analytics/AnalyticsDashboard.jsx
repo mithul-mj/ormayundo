@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { useState, useEffect, useMemo } from 'react';
 import Confetti from 'react-confetti';
-import { API_URL } from '../../shared/config';
-import { themeColors } from '../../shared/theme';
+import { useAnalyticsQuery } from './api/analyticsApi';
+import { STREAK_MILESTONES } from '../../shared/constants';
 import {
   AnalyticsSummaryHeader,
   MasteryDonutChart,
@@ -11,17 +9,17 @@ import {
   RetentionAreaChart,
   SourcesList,
   CircadianBarChart,
+  AnalyticsSkeleton,
 } from './components';
-import { STREAK_MILESTONES } from '../../shared/constants';
 
-const AnalyticsDashboard = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function AnalyticsDashboard({ onNavigateToReview }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowDimension, setWindowDimension] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
   });
+
+  const { data, isLoading: loading } = useAnalyticsQuery();
 
   useEffect(() => {
     const handleResize = () =>
@@ -52,44 +50,42 @@ const AnalyticsDashboard = () => {
     };
   }, [data]);
 
-  useEffect(() => {
-    let ignore = false;
-    async function fetchData() {
-      try {
-        const res = await axios.get(`${API_URL}/analytics`, { withCredentials: true });
-        if (!ignore) {
-          setData(res.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch analytics', err);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    fetchData();
-    return () => {
-      ignore = true;
-    };
+  // Formatted date string (e.g. "Tuesday, 10 November")
+  const formattedDate = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
   }, []);
 
+  // Compute due today count dynamically from workload
+  const dueTodayCount = useMemo(() => {
+    if (!data?.workload) return 0;
+    const todayItem = data.workload.find((w) => (w.day || w.label || '').toLowerCase() === 'today');
+    return Math.max(0, Number(todayItem?.count ?? todayItem?.value) || 0);
+  }, [data]);
+
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
-  if (!data) {
-    return (
-      <div className="text-center p-8 text-gray-500">
-        Failed to load analytics data.
-      </div>
-    );
-  }
+  // 100% Dynamic data from backend API
+  const totalCards = Math.max(0, Number(data?.totalCards) || 0);
+  const additionStreak = Math.max(0, Number(data?.additionStreak) || 0);
+  const maxStreak = Math.max(0, Number(data?.maxStreak) || 0);
+  const retentionRate = typeof data?.retentionRate === 'number' ? data.retentionRate : 100;
 
   return (
-    <div className="relative">
+    <div
+      style={{
+        minHeight: '100%',
+        background: 'var(--brain-bg)',
+        color: 'var(--brain-text)',
+        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
           <Confetti
@@ -98,39 +94,59 @@ const AnalyticsDashboard = () => {
             recycle={false}
             numberOfPieces={400}
             gravity={0.15}
-            colors={[
-              themeColors.brandLight,
-              themeColors.brand,
-              '#ff8a8f',
-              '#ffffff',
-            ]}
+            colors={['#D92D4A', '#FF385C', '#3FB68B', '#5B8DEF', '#E8A33D']}
           />
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div
+        style={{
+          maxWidth: '1120px',
+          margin: '0 auto',
+          padding: '24px 20px 72px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '40px',
+        }}
+        className="sm:px-8"
+      >
+        {/* Title & KPI Strip Component */}
         <AnalyticsSummaryHeader
-          totalCards={data.totalCards}
-          additionStreak={data.additionStreak}
-          maxStreak={data.maxStreak}
-          retentionRate={data.retentionRate}
+          totalCards={totalCards}
+          additionStreak={additionStreak}
+          maxStreak={maxStreak}
+          retentionRate={retentionRate}
+          dueTodayCount={dueTodayCount}
+          onNavigateToReview={onNavigateToReview}
+          formattedDate={formattedDate}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <MasteryDonutChart masteryData={data.mastery} />
-          <WorkloadChart workloadData={data.workload} />
-        </div>
+        {/* Row 1: Knowledge Mastery & Upcoming Workload Components */}
+        <section style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+          <MasteryDonutChart
+            masteryData={data?.mastery || []}
+            totalCards={totalCards}
+          />
+          <WorkloadChart
+            workloadData={data?.workload || []}
+          />
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <RetentionAreaChart heatmapData={data.heatmap} />
-          <SourcesList sources={data.sources} />
-        </div>
+        {/* Row 2: Learning Consistency Area Chart Component */}
+        <RetentionAreaChart
+          heatmapData={data?.heatmap || []}
+        />
 
-        <CircadianBarChart accuracyByTime={data.accuracyByTime} />
+        {/* Row 3: Top Sources & Accuracy by Time Components */}
+        <section style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+          <SourcesList
+            sources={data?.sources || []}
+          />
+          <CircadianBarChart
+            accuracyByTime={data?.accuracyByTime || []}
+          />
+        </section>
       </div>
     </div>
   );
-};
-
-export default AnalyticsDashboard;
-
+}

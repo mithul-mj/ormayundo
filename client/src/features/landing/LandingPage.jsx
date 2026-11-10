@@ -27,7 +27,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
   return (
     <div className={
       [
-        'min-h-screen bg-white text-ink flex flex-col font-sans',
+        'min-h-screen bg-white text-ink flex flex-col font-sans overflow-x-hidden',
         'selection:bg-brand/15 selection:text-brand'
       ].join(' ')
     }>
@@ -37,7 +37,9 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
       />
 
       <main>
-        <HeroSection onOpenModal={setActiveModalImg} />
+        <HeroSection
+          onGetStarted={onGetStarted}
+        />
         <ExtensionShowcase onOpenModal={setActiveModalImg} />
         <AnalyticsShowcase
           onOpenModal={setActiveModalImg}

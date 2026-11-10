@@ -1,4 +1,5 @@
 import RecallItem from '../models/recallItem.js';
+import { getLocalDateString, getYesterdayLocalDateString } from '../utils/streakHelper.js';
 
 export const getAnalytics = async (req, res) => {
   try {
@@ -50,12 +51,12 @@ export const getAnalytics = async (req, res) => {
     cards.forEach(card => {
       // 1. Mastery Breakdown (Active cards only)
       if (card.status !== 'archived') {
-        if (card.reviewCount === 0) {
+        if (!card.reviewCount || card.reviewCount === 0) {
           newCards++;
-        } else if (card.correctCount === 0) {
-          relearningCards++;
-        } else if (card.interval >= 21) {
+        } else if (card.interval >= 21 || (card.isGraduated && card.interval >= 14)) {
           masteredCards++;
+        } else if (card.reviewHistory && card.reviewHistory.length > 2 && card.correctCount === 0 && card.interval === 0) {
+          relearningCards++;
         } else {
           learningCards++;
         }
@@ -103,23 +104,21 @@ export const getAnalytics = async (req, res) => {
 
     const workloadData = Object.keys(upcoming).map(day => ({ day, count: upcoming[day] }));
 
-    // Read optimized Streak from Database
-    const nowStreak = new Date();
-    const todayStr = nowStreak.toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    // Read optimized Streak from Database with timezone awareness
+    const userTimezone = req.query.timezone || req.headers['x-timezone'] || "UTC";
+    const todayStr = getLocalDateString(new Date(), userTimezone);
+    const yesterdayStr = getYesterdayLocalDateString(new Date(), userTimezone);
 
-    const lastAddedStr = req.user.lastAddedDate ? new Date(req.user.lastAddedDate).toISOString().split('T')[0] : null;
+    const lastActiveDate = req.user.lastStudiedDate || req.user.lastAddedDate;
+    const lastActiveStr = lastActiveDate ? getLocalDateString(new Date(lastActiveDate), userTimezone) : null;
 
-    // If the last added date is older than yesterday, their streak is broken (0)
+    // If neither today nor yesterday had study activity, streak is broken (0)
     let displayStreak = req.user.currentStreak || 0;
-    if (lastAddedStr !== todayStr && lastAddedStr !== yesterdayStr) {
+    if (lastActiveStr !== todayStr && lastActiveStr !== yesterdayStr) {
       displayStreak = 0;
     }
 
     // 🚀 OPTIMIZATION: MongoDB Aggregation Pipeline for Time of Day Accuracy
-    const userTimezone = req.query.timezone || "UTC";
     const timeAggregation = await RecallItem.aggregate([
       { $match: { userId: req.user._id } },
       { $unwind: "$reviewHistory" },
@@ -173,6 +172,7 @@ export const getAnalytics = async (req, res) => {
       { time: "Night", ...accuracyBuckets["Night"] }
     ];
 
+    res.set('Cache-Control', 'private, max-age=30');
     res.json({
       mastery: [
         { name: 'New', value: newCards, fill: '#3b82f6' },

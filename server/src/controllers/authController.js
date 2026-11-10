@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
+import SystemConfig from '../models/systemConfig.js';
 import generateTokens from '../utils/generateTokens.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
 import { MESSAGES, AUTH_COOKIES, USER_ROLES } from '../utils/constants.js';
@@ -153,15 +154,22 @@ export const logoutUser = async (req, res) => {
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.SUCCESS.LOGGED_OUT });
 };
 
-// Return lightweight profile of current user
+// Return lightweight profile of current user bundled with platform announcement
 export const getMe = async (req, res) => {
+  const config = await SystemConfig.getSettings().catch(() => null);
   res.status(STATUS_CODES.OK).json({
     _id: req.user._id,
     email: req.user.email,
     role: req.user.role || 'user',
     isBlocked: req.user.isBlocked || false,
     currentStreak: req.user.currentStreak || 0,
-    maxStreak: req.user.maxStreak || 0
+    maxStreak: req.user.maxStreak || 0,
+    announcement: config ? {
+      announcementActive: Boolean(config.announcementActive),
+      announcementBanner: config.announcementBanner || '',
+      maintenanceMode: Boolean(config.maintenanceMode),
+      maintenanceMessage: config.maintenanceMessage || ''
+    } : null
   });
 };
 

@@ -4,32 +4,30 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-white border-t border-divider py-12">
-      <div className={
-      [
-        'max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between',
-        'items-center gap-6'
-      ].join(' ')
-    }>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-brand flex items-center justify-center text-white">
-            <Brain className="w-4 h-4" />
+    <footer className="bg-white border-t border-neutral-200/80 py-10 sm:py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-5 sm:gap-6">
+        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-brand" />
+            <span className="font-bold text-base text-neutral-950 tracking-tight">Ormayundo.</span>
           </div>
-          <span className="font-extrabold text-lg text-ink tracking-tight">Ormayundo.</span>
-          <span className="text-xs text-muted ml-2">© {currentYear} Active Recall</span>
+          <span className="text-xs text-neutral-400">© {currentYear} Ormayundo. All rights reserved.</span>
         </div>
 
-        <div className="flex items-center gap-6 text-xs font-semibold text-muted">
-          <a href="/privacy" className="hover:text-ink transition-colors">
-            Privacy
+        <div className="flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-6 gap-y-2 text-xs font-medium text-neutral-600">
+          <a href="/privacy" className="hover:text-neutral-950 transition-colors">
+            Privacy Policy
           </a>
-          <a href="#how-it-works" className="hover:text-ink transition-colors">
+          <a href="#how-it-works" className="hover:text-neutral-950 transition-colors">
             How It Works
+          </a>
+          <a href="#science" className="hover:text-neutral-950 transition-colors">
+            The Science
           </a>
           <a
             href="/ormayundo-extension.zip"
             download="ormayundo-extension.zip"
-            className="hover:text-ink transition-colors"
+            className="hover:text-neutral-950 transition-colors"
           >
             Download Extension
           </a>

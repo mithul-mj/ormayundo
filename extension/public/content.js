@@ -6,25 +6,126 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
 
   let floatingBtn = null;
   let isPopupEnabled = true; // Default to true
+  let isLoggedIn = false;
+  let toastContainer = null;
 
-  // Initialize popup setting from storage
-  chrome.storage.local.get(['ormayundo_popup_enabled'], (result) => {
+  // Initialize popup setting & auth state from storage
+  chrome.storage.local.get(['ormayundo_popup_enabled', 'ormayundo_user'], (result) => {
     if (result.ormayundo_popup_enabled !== undefined) {
       isPopupEnabled = result.ormayundo_popup_enabled;
     }
+    isLoggedIn = Boolean(result.ormayundo_user);
   });
 
-  // Listen for toggles from the extension UI
+  // Listen for toggles & auth state changes from extension
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.ormayundo_popup_enabled) {
-      isPopupEnabled = changes.ormayundo_popup_enabled.newValue;
-      // If user disabled it while button is open, instantly remove it
-      if (!isPopupEnabled && floatingBtn) {
-        if (floatingBtn.parentNode) document.body.removeChild(floatingBtn);
-        floatingBtn = null;
+    if (namespace === 'local') {
+      if (changes.ormayundo_popup_enabled !== undefined) {
+        isPopupEnabled = changes.ormayundo_popup_enabled.newValue;
+        if (!isPopupEnabled && floatingBtn) {
+          if (floatingBtn.parentNode) document.body.removeChild(floatingBtn);
+          floatingBtn = null;
+        }
+      }
+      if (changes.ormayundo_user !== undefined) {
+        isLoggedIn = Boolean(changes.ormayundo_user.newValue);
+        if (floatingBtn) {
+          updateFloatingBtnAppearance(floatingBtn, isLoggedIn);
+        }
       }
     }
   });
+
+  function showToast({ title, message, actionLabel, onAction, type = 'info', duration = 5000 }) {
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.id = 'ormayundo-toast-container';
+      document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `ormayundo-toast ${type}`;
+
+    let iconSvg = '';
+    if (type === 'warning' || type === 'auth_error' || type === 'error') {
+      iconSvg = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      `;
+    } else {
+      iconSvg = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      `;
+    }
+
+    toast.innerHTML = `
+      ${iconSvg}
+      <div class="ormayundo-toast-body">
+        <div class="ormayundo-toast-title">${title || 'Ormayundo'}</div>
+        <div class="ormayundo-toast-desc">${message || ''}</div>
+      </div>
+      ${actionLabel ? `<button type="button" class="ormayundo-toast-btn">${actionLabel}</button>` : ''}
+      <button type="button" class="ormayundo-toast-close" title="Dismiss">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    `;
+
+    const closeBtn = toast.querySelector('.ormayundo-toast-close');
+    const dismiss = () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px) scale(0.96)';
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 200);
+    };
+
+    closeBtn?.addEventListener('click', dismiss);
+
+    if (actionLabel && onAction) {
+      const actionBtn = toast.querySelector('.ormayundo-toast-btn');
+      actionBtn?.addEventListener('click', () => {
+        onAction();
+        dismiss();
+      });
+    }
+
+    toastContainer.appendChild(toast);
+
+    if (duration > 0) {
+      setTimeout(dismiss, duration);
+    }
+  }
+
+  function updateFloatingBtnAppearance(btn, loggedIn) {
+    if (!btn) return;
+    if (!loggedIn) {
+      btn.classList.add('logged-out');
+      btn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Log in to Save
+      `;
+    } else {
+      btn.classList.remove('logged-out');
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+        </svg>
+        Save to Ormayundo
+      `;
+    }
+  }
 
   function getExtractedText(selection) {
     if (!selection || selection.rangeCount === 0) return "";
@@ -113,12 +214,7 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
       // Create the button
       floatingBtn = document.createElement('button');
       floatingBtn.id = 'ormayundo-floating-btn';
-      floatingBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-      </svg>
-      Save to Ormayundo
-    `;
+      updateFloatingBtnAppearance(floatingBtn, isLoggedIn);
 
       // Always place the button just below the selection
       // Clamp to window bounds so it doesn't fall off the bottom of the screen
@@ -137,33 +233,114 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
 
       // Handle the click
       floatingBtn.addEventListener('click', () => {
-        // INSTANT Visual Feedback
-        floatingBtn.innerHTML = 'Saved! ✓';
-        floatingBtn.style.backgroundColor = '#00C853';
-        floatingBtn.style.transform = 'translateX(-50%) scale(1.05)';
-        floatingBtn.style.pointerEvents = 'none'; // Prevent double clicking
+        if (!isLoggedIn) {
+          // Open login and guide user
+          chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' });
+          showToast({
+            type: 'warning',
+            title: 'Login Required',
+            message: 'Please log in to Ormayundo to save flashcards to your deck.',
+            actionLabel: 'Log In',
+            onAction: () => chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' })
+          });
+          if (floatingBtn && floatingBtn.parentNode) {
+            document.body.removeChild(floatingBtn);
+            floatingBtn = null;
+          }
+          return;
+        }
 
-        // Send message to background script to make the API call silently
+        // Show loading state
+        floatingBtn.style.pointerEvents = 'none';
+        floatingBtn.style.backgroundColor = '#18181B';
+        floatingBtn.innerHTML = `
+          <svg class="ormayundo-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+          </svg>
+          Saving...
+        `;
+
+        // Send message to background script and await actual response
         chrome.runtime.sendMessage({
           action: 'SAVE_FLASHCARD',
           text: selectedText,
           url: window.location.href
-        });
+        }, (response) => {
+          if (!floatingBtn || !floatingBtn.parentNode) return;
 
-        // Clear the text selection immediately
-        window.getSelection()?.removeAllRanges();
+          if (chrome.runtime.lastError || !response || !response.success) {
+            const isAuth = response?.status === 401 || response?.error === 'AUTH_REQUIRED';
 
-        // Remove button after a short "Saved!" confirmation, then fade out
-        setTimeout(() => {
-          if (floatingBtn && floatingBtn.parentNode) {
-            floatingBtn.style.opacity = '0';
-            floatingBtn.style.transition = 'opacity 0.2s ease';
-            setTimeout(() => {
-              if (floatingBtn && floatingBtn.parentNode) document.body.removeChild(floatingBtn);
-              floatingBtn = null;
-            }, 200);
+            if (isAuth) {
+              isLoggedIn = false;
+              floatingBtn.style.backgroundColor = '#EF4444';
+              floatingBtn.style.pointerEvents = 'auto';
+              floatingBtn.innerHTML = `
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Log in to Save
+              `;
+              floatingBtn.onclick = () => {
+                chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' });
+              };
+              showToast({
+                type: 'warning',
+                title: 'Login Required',
+                message: 'Your session expired. Please log in to Ormayundo to save this flashcard.',
+                actionLabel: 'Log In',
+                onAction: () => chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' })
+              });
+
+              setTimeout(() => {
+                if (floatingBtn && floatingBtn.parentNode) {
+                  floatingBtn.style.opacity = '0';
+                  setTimeout(() => {
+                    if (floatingBtn && floatingBtn.parentNode) document.body.removeChild(floatingBtn);
+                    floatingBtn = null;
+                  }, 200);
+                }
+              }, 4000);
+            } else {
+              floatingBtn.style.backgroundColor = '#EF4444';
+              floatingBtn.innerHTML = '✕ Save Failed';
+              showToast({
+                type: 'error',
+                title: 'Save Failed',
+                message: response?.message || 'Unable to save flashcard. Please check your connection.'
+              });
+              setTimeout(() => {
+                if (floatingBtn && floatingBtn.parentNode) {
+                  floatingBtn.style.opacity = '0';
+                  setTimeout(() => {
+                    if (floatingBtn && floatingBtn.parentNode) document.body.removeChild(floatingBtn);
+                    floatingBtn = null;
+                  }, 200);
+                }
+              }, 2500);
+            }
+            return;
           }
-        }, 800);
+
+          // SUCCESS Feedback
+          floatingBtn.innerHTML = 'Saved! ✓';
+          floatingBtn.style.backgroundColor = '#00C853';
+          floatingBtn.style.transform = 'translateX(-50%) scale(1.05)';
+          window.getSelection()?.removeAllRanges();
+
+          setTimeout(() => {
+            if (floatingBtn && floatingBtn.parentNode) {
+              floatingBtn.style.opacity = '0';
+              floatingBtn.style.transition = 'opacity 0.2s ease';
+              setTimeout(() => {
+                if (floatingBtn && floatingBtn.parentNode) document.body.removeChild(floatingBtn);
+                floatingBtn = null;
+              }, 200);
+            }
+          }, 1000);
+        });
       });
 
       document.body.appendChild(floatingBtn);
@@ -237,6 +414,21 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
       };
       // Start immediate attempt (no extra delay needed – the retry will cover late loads)
       attemptHighlight();
+    }
+
+    if (request.action === 'SHOW_TOAST') {
+      showToast({
+        type: request.type || 'info',
+        title: request.title || (request.type === 'auth_error' ? 'Login Required' : 'Ormayundo'),
+        message: request.message,
+        actionLabel: request.actionLabel || (request.type === 'auth_error' ? 'Log In' : null),
+        onAction: () => {
+          if (request.type === 'auth_error' || request.actionLabel === 'Log In') {
+            chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' });
+          }
+        }
+      });
+      sendResponse({ received: true });
     }
   });
 

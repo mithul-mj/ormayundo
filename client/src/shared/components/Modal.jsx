@@ -49,28 +49,28 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-divider shrink-0">
-          <div>
+        <div className="flex items-center justify-between gap-3 p-4 sm:p-6 border-b border-divider shrink-0">
+          <div className="min-w-0">
             {title && (
-              <h3 className="font-extrabold text-lg text-ink leading-tight">
+              <h3 className="font-extrabold text-base sm:text-lg text-ink leading-tight truncate">
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className="text-xs text-muted mt-0.5">{subtitle}</p>
+              <p className="text-xs text-muted mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full border border-divider flex items-center justify-center text-muted hover:text-ink hover:border-ink transition-colors cursor-pointer"
+            className="w-8 h-8 shrink-0 rounded-full border border-divider flex items-center justify-center text-muted hover:text-ink hover:border-ink transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
           {children}
         </div>
       </div>

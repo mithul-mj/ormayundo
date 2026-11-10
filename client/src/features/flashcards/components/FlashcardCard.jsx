@@ -1,7 +1,17 @@
-import { Pencil, Trash2, X, Save, Tag } from 'lucide-react';
+import { Pencil, Trash2, X, Save, Tag, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DeckDropdown from './DeckDropdown';
+
+const getSourceDomain = (url) => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`);
+    return parsed.hostname.replace(/^www\./i, '') || url;
+  } catch {
+    return 'Source';
+  }
+};
 
 export default function FlashcardCard({
   card,
@@ -24,10 +34,10 @@ export default function FlashcardCard({
       [
         'bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-sm border',
         'border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all',
-        'duration-300 flex flex-col md:flex-row gap-6'
+        'duration-300 flex flex-col md:flex-row gap-6 min-w-0 max-w-full'
       ].join(' ')
     }>
-      <div className="flex-1 space-y-5">
+      <div className="flex-1 min-w-0 space-y-5">
         {/* Question Header & Deck Badge */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -76,7 +86,7 @@ export default function FlashcardCard({
     }
             />
           ) : (
-            <p className="text-xl font-bold text-gray-900 leading-tight">
+            <p className="text-xl font-bold text-gray-900 leading-tight break-words">
               {card.question}
             </p>
           )}
@@ -101,21 +111,34 @@ export default function FlashcardCard({
     }
             />
           ) : (
-            <div className="py-1 max-h-72 overflow-y-auto custom-scrollbar">
+            <div className="py-1 max-h-72 overflow-y-auto overflow-x-auto custom-scrollbar">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   table: ({ ...props }) => (
-                    <table className="markdown-table" {...props} />
+                    <div className="w-full overflow-x-auto my-3 rounded-xl border border-gray-100">
+                      <table className="markdown-table !my-0 w-full" {...props} />
+                    </div>
                   ),
+                  pre: ({ ...props }) => (
+                    <div className="w-full overflow-x-auto my-3 rounded-xl">
+                      <pre className="p-3 bg-gray-900 text-gray-100 rounded-xl text-xs font-mono" {...props} />
+                    </div>
+                  ),
+                  code: ({ inline, ...props }) =>
+                    inline ? (
+                      <code className="bg-gray-100 text-brand px-1.5 py-0.5 rounded text-xs font-mono break-all" {...props} />
+                    ) : (
+                      <code {...props} />
+                    ),
                   a: ({ ...props }) => (
                     <a
-                      className="text-brand-light font-medium hover:underline hover:text-brand transition-colors"
+                      className="text-brand-light font-medium hover:underline hover:text-brand transition-colors break-all"
                       {...props}
                     />
                   ),
                   p: ({ ...props }) => (
-                    <p className="text-gray-700 leading-relaxed mb-4 last:mb-0" {...props} />
+                    <p className="text-gray-700 leading-relaxed mb-4 last:mb-0 break-words" {...props} />
                   ),
                 }}
               >
@@ -126,7 +149,7 @@ export default function FlashcardCard({
         </div>
 
         {/* Metadata */}
-        <div className="flex gap-4 text-xs text-gray-400 font-medium">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 font-medium">
           <span>Reviews: {card.reviewCount}</span>
           <span>Next Review: {new Date(card.nextReviewAt).toLocaleDateString()}</span>
           {card.sourceUrl && (
@@ -134,9 +157,10 @@ export default function FlashcardCard({
               href={card.sourceUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-brand-light hover:underline"
+              className="inline-flex items-center gap-1 text-brand hover:underline font-medium"
             >
-              Source Link
+              <span>{getSourceDomain(card.sourceUrl)}</span>
+              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
             </a>
           )}
         </div>

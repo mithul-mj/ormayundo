@@ -15,6 +15,7 @@ import {
   retryFailedJobs,
   getSystemConfig,
   updateSystemConfig,
+  resetSlotCooldown,
   getAdminFlashcards,
   updateAdminFlashcard,
   deleteAdminFlashcard,
@@ -36,6 +37,7 @@ router.get('/stats', getAdminStats);
 // 2. Dynamic Guardrails & Platform Settings
 router.get('/config', getSystemConfig);
 router.put('/config', updateSystemConfig);
+router.post('/slots/:slotId/reset-cooldown', resetSlotCooldown);
 
 // 3. User Management & Full Editing
 router.get('/users', getAdminUsers);

@@ -227,9 +227,9 @@ export default function AdminUsersTab({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-divider shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden animate-fade-in">
+    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs animate-fade-in overflow-hidden">
       {/* Search & Filter Bar */}
-      <div className="p-4 sm:p-6 border-b border-divider flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <SearchInput
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -264,7 +264,7 @@ export default function AdminUsersTab({
 
           <button
             onClick={onRefresh}
-            className="px-4 py-2 bg-surface hover:bg-surface-hover text-ink text-xs font-bold rounded-full border border-divider transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-full border border-gray-200 transition-colors cursor-pointer"
           >
             Refresh
           </button>
@@ -336,7 +336,7 @@ export default function AdminUsersTab({
                   <td className="py-3 px-4">
                     <span className="inline-flex items-center gap-1 font-bold text-ink">
                       <Brain className="w-3.5 h-3.5 text-brand" />
-                      {u.cardCount ?? 0}
+                      {u.cardsCount ?? u.cardCount ?? 0}
                     </span>
                   </td>
 
@@ -350,7 +350,7 @@ export default function AdminUsersTab({
                   <td className="py-3 px-4">
                     <span className="inline-flex items-center gap-1 font-semibold text-muted text-[11px]">
                       <Zap className="w-3 h-3 text-purple-600" />
-                      {(u.tokenUsage?.totalTokens || 0).toLocaleString()}
+                      {(u.tokensUsed ?? u.tokenUsage?.totalTokens ?? 0).toLocaleString()}
                     </span>
                   </td>
 
@@ -446,7 +446,7 @@ export default function AdminUsersTab({
               <div className="grid grid-cols-3 gap-2 py-1.5 text-center text-xs">
                 <div>
                   <span className="text-[10px] text-muted block">Cards</span>
-                  <span className="font-bold text-ink">{u.cardCount ?? 0}</span>
+                  <span className="font-bold text-ink">{u.cardsCount ?? u.cardCount ?? 0}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block">Streak</span>
@@ -454,7 +454,7 @@ export default function AdminUsersTab({
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block">Tokens</span>
-                  <span className="font-bold text-purple-600">{(u.tokenUsage?.totalTokens || 0).toLocaleString()}</span>
+                  <span className="font-bold text-purple-600">{(u.tokensUsed ?? u.tokenUsage?.totalTokens ?? 0).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -512,7 +512,7 @@ export default function AdminUsersTab({
       )}
 
       {/* Pagination Bar */}
-      <div className="p-4 border-t border-divider flex items-center justify-between text-xs text-muted">
+      <div className="p-4 border-t border-divider flex flex-col sm:flex-row gap-3 items-center justify-between text-xs text-muted">
         <span>
           Showing {users.length} of {pagination.total} students
         </span>
@@ -557,7 +557,7 @@ export default function AdminUsersTab({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="User Role"
               value={editForm.role}
@@ -583,7 +583,7 @@ export default function AdminUsersTab({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-ink mb-1.5">Current Streak</label>
               <input

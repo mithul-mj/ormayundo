@@ -1,76 +1,68 @@
 import { ArrowRight } from 'lucide-react';
+import ModernCard from './ModernCard';
+import ScrollReveal from './ScrollReveal';
 
 const steps = [
   {
     num: '01',
     title: 'Install Extension',
-    desc: 'Download the ZIP below, extract it, and click "Load unpacked" in Chrome Developer mode.',
-    tag: 'Takes 30 seconds',
+    desc: 'Add Ormayundo to your browser in under 30 seconds. Works with Chrome, Brave, Edge & Opera.',
+    tag: 'Fast & lightweight',
   },
   {
     num: '02',
-    title: 'Highlight Anything',
-    desc: 'Read Wikipedia, technical docs, or articles. Highlight any core sentence or formula.',
-    tag: 'Preserves code & tables',
+    title: 'Highlight Any Text',
+    desc: 'Highlight any important sentence, idea, formula, or code snippet while you read on the web.',
+    tag: 'Works everywhere',
   },
   {
     num: '03',
-    title: '1-Click Save',
-    desc: 'Click the red "Save to Ormayundo" button. Generates an active recall question in the background.',
-    tag: 'Instant background save',
+    title: 'Click Save',
+    desc: 'Click the floating button. AI automatically turns your selection into a smart flashcard.',
+    tag: '1-click save',
   },
   {
     num: '04',
-    title: 'Active Recall',
-    desc: 'Review due cards via the extension popup or web dashboard using SM-2 spaced repetition intervals.',
-    tag: 'Permanent retention',
+    title: 'Review When Due',
+    desc: 'Review cards right in your browser tab when they are due, so you remember them permanently.',
+    tag: 'Long-term memory',
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 bg-white">
+    <section id="how-it-works" className="py-10 sm:py-20 md:py-24 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-8">
-        <div className="text-center mb-16">
-          <span className={
-      [
-        'text-[11px] font-bold text-brand tracking-widest uppercase bg-brand/10',
-        'px-3.5 py-1.5 rounded-full'
-      ].join(' ')
-    }>
-            4-Step Workflow
+        <ScrollReveal className="text-center mb-8 sm:mb-14">
+          <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-brand mb-2">
+            How It Works
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight mt-3 mb-3">
-            How to use Ormayundo
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-neutral-950 tracking-tight mb-2 sm:mb-3">
+            Turn what you read into long-term memory
           </h2>
-          <p className="text-muted max-w-lg mx-auto text-sm sm:text-base">
-            Turn passive reading into permanent memory in 4 simple steps.
+          <p className="text-neutral-600 max-w-lg mx-auto text-xs sm:text-base leading-relaxed">
+            Four simple steps to remember ideas, facts, and code forever.
           </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {steps.map((s) => (
-            <div
-              key={s.num}
-              className="p-6 sm:p-7 rounded-3xl bg-surface/50 hover:bg-surface transition-all flex flex-col justify-between"
-            >
-              <div>
-                <span className={
-      [
-        'w-10 h-10 rounded-2xl bg-surface border border-divider text-ink',
-        'font-extrabold text-sm flex items-center justify-center mb-5'
-      ].join(' ')
-    }>
-                  {s.num}
-                </span>
-                <h3 className="font-bold text-ink text-lg mb-2">{s.title}</h3>
-                <p className="text-muted text-xs sm:text-sm leading-relaxed">{s.desc}</p>
-              </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {steps.map((s, idx) => (
+            <ScrollReveal key={s.num} delay={idx * 75}>
+              <ModernCard className="p-4 sm:p-6 flex flex-col justify-between h-full">
+                <div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 text-brand font-mono font-bold text-[10px] sm:text-xs mb-2.5 sm:mb-3">
+                    Step {s.num}
+                  </span>
+                  <h3 className="font-bold text-neutral-950 text-sm sm:text-base mb-1.5 sm:mb-2">{s.title}</h3>
+                  <p className="text-neutral-600 text-[11px] sm:text-sm leading-relaxed">{s.desc}</p>
+                </div>
 
-              <div className="mt-6 pt-4 border-t border-divider text-xs font-bold text-brand flex items-center gap-1">
-                {s.tag} <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
+                <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-neutral-100 text-[11px] sm:text-xs font-semibold text-neutral-900 flex items-center justify-between">
+                  <span className="truncate">{s.tag}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 hidden sm:inline group-hover:translate-x-1 group-hover:text-neutral-900 transition-all duration-200" />
+                </div>
+              </ModernCard>
+            </ScrollReveal>
           ))}
         </div>
       </div>

@@ -54,6 +54,7 @@ app.use('/api', generalRateLimiter);
 // Public announcement & guardrails status endpoint for clients
 app.get('/api/announcement', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=300');
     const config = await SystemConfig.getSettings();
     res.status(200).json({
       maintenanceMode: config.maintenanceMode,

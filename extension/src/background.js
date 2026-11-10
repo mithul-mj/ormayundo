@@ -8,16 +8,22 @@ async function fetchWithAuth(url, options) {
 
   if (response.status === 401) {
     console.log('[background.js] 401 Unauthorized. Attempting token refresh...');
-    const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include'
-    });
+    try {
+      const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include'
+      });
 
-    if (refreshResponse.ok) {
-      console.log('[background.js] Token refreshed. Retrying request...');
-      response = await fetch(url, options);
-    } else {
-      console.error('[background.js] Token refresh failed. User must log in.');
+      if (refreshResponse.ok) {
+        console.log('[background.js] Token refreshed. Retrying request...');
+        response = await fetch(url, options);
+      } else {
+        console.warn('[background.js] Token refresh failed. Clearing stale session.');
+        chrome.storage.local.remove(['ormayundo_user']);
+        chrome.contextMenus.removeAll();
+      }
+    } catch (err) {
+      console.error('[background.js] Token refresh network error:', err);
     }
   }
 
@@ -124,6 +130,76 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// --- FEEDBACK & NOTIFICATION HELPERS ---
+function notifyAuthRequired(tabId = null) {
+  // 1. Informative Badge & Tooltip (replaces cryptic X with actionable feedback)
+  chrome.action.setBadgeText({ text: '!' });
+  chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
+  chrome.action.setTitle({ title: 'Ormayundo: Please log in to save flashcards' });
+  setTimeout(() => {
+    chrome.action.setBadgeText({ text: '' });
+    chrome.action.setTitle({ title: 'Ormayundo' });
+  }, 4000);
+
+  // 2. Native System Desktop Notification
+  if (typeof chrome !== 'undefined' && chrome.notifications) {
+    chrome.notifications.create('ormayundo-auth-error', {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icon.png'),
+      title: 'Ormayundo — Login Required',
+      message: 'Please log in to your account to save flashcards to your deck.',
+      priority: 2
+    });
+  }
+
+  // 3. In-page Toast on current active tab
+  if (tabId) {
+    chrome.tabs.sendMessage(tabId, {
+      action: 'SHOW_TOAST',
+      type: 'auth_error',
+      title: 'Login Required',
+      message: 'Please log in to Ormayundo to save this card to your spaced repetition deck.',
+      actionLabel: 'Log In'
+    }, () => {
+      if (chrome.runtime.lastError) { /* ignore tab communication quirks */ }
+    });
+  }
+}
+
+function notifySaveError(errorMessage, tabId = null) {
+  chrome.action.setBadgeText({ text: '✕' });
+  chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
+  setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
+
+  if (tabId) {
+    chrome.tabs.sendMessage(tabId, {
+      action: 'SHOW_TOAST',
+      type: 'error',
+      title: 'Save Failed',
+      message: errorMessage || 'Could not save flashcard. Please check your connection.'
+    }, () => {
+      if (chrome.runtime.lastError) { /* ignore tab communication quirks */ }
+    });
+  }
+}
+
+function notifySaveSuccess(tabId = null) {
+  chrome.action.setBadgeText({ text: '✓' });
+  chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeSuccess });
+  setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+
+  if (tabId) {
+    chrome.tabs.sendMessage(tabId, {
+      action: 'SHOW_TOAST',
+      type: 'success',
+      title: 'Flashcard Saved',
+      message: 'Added to your active recall review deck.'
+    }, () => {
+      if (chrome.runtime.lastError) { /* ignore tab communication quirks */ }
+    });
+  }
+}
+
 // Listen for clicks on the right-click menu
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "save-to-ormayundo") {
@@ -131,15 +207,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     const handleSave = async (selectedText) => {
       if (!selectedText || selectedText.trim().length < 20) {
         console.warn('[background.js] Selection too short or empty, aborting save.');
+        notifySaveError('Highlight at least 20 characters to create a flashcard.', tab?.id);
         return;
       }
 
       const sourceUrl = tab && tab.url ? tab.url : '';
       if (!sourceUrl) {
         console.error('[background.js] Tab URL missing, cannot save recall.');
-        chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+        notifySaveError('Cannot save flashcard from this page.', tab?.id);
         return;
       }
 
@@ -149,23 +224,27 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
       try {
         const payload = { selectedText, sourceUrl };
-        console.log('[background.js] Payload being sent:', payload);
         const res = await fetchWithAuth(`${API_URL}/recall`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error('Server returned ' + res.status);
+
+        if (res.status === 401) {
+          notifyAuthRequired(tab?.id);
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error('Server returned ' + res.status);
+        }
+
         console.log('[background.js] Successfully saved to backend!');
-        chrome.action.setBadgeText({ text: '✓' });
-        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeSuccess });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+        notifySaveSuccess(tab?.id);
       } catch (error) {
         console.error('[background.js] Error saving from context menu:', error);
-        chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+        notifySaveError(error.message, tab?.id);
       }
     };
 
@@ -179,17 +258,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           selectedText = info.selectionText;
         } else {
           console.error('[background.js] Error from content script and no native selection available:', chrome.runtime.lastError?.message || response?.error);
-          chrome.action.setBadgeText({ text: 'X' });
-          chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
-          setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
+          notifySaveError('Could not extract selected text.', tab?.id);
           return;
         }
       }
 
       await handleSave(selectedText);
     });
-
-
   }
 });
 
@@ -202,6 +277,19 @@ chrome.runtime.onMessage.addListener((request) => {
     chrome.contextMenus.removeAll();
   } else if (request.action === 'SYNC_FCM_TOKEN') {
     syncFcmToken();
+  } else if (request.action === 'OPEN_LOGIN') {
+    const appUrl = `${WEB_APP_URL}/app`;
+    chrome.tabs.query({}, (tabs) => {
+      const existingTab = tabs.find(t => t.url && t.url.includes(WEB_APP_URL));
+      if (existingTab && existingTab.id) {
+        chrome.tabs.update(existingTab.id, { active: true });
+        if (existingTab.windowId) {
+          chrome.windows.update(existingTab.windowId, { focused: true });
+        }
+      } else {
+        chrome.tabs.create({ url: appUrl });
+      }
+    });
   }
 });
 
@@ -222,7 +310,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           body: JSON.stringify({ selectedText: request.text, sourceUrl: request.url })
         });
 
-        if (!response.ok) throw new Error('Server returned ' + response.status);
+        if (response.status === 401) {
+          notifyAuthRequired(sender.tab?.id);
+          sendResponse({
+            success: false,
+            status: 401,
+            error: 'AUTH_REQUIRED',
+            message: 'Please log in to Ormayundo to save flashcards.'
+          });
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Server returned ' + response.status);
+        }
 
         console.log('[background.js] Successfully saved to backend!');
         chrome.action.setBadgeText({ text: '✓' });
@@ -232,11 +333,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
       } catch (error) {
         console.error('[background.js] Error saving from floating button:', error);
-        chrome.action.setBadgeText({ text: 'X' });
-        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
-        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
-
-        sendResponse({ success: false, error: error.message });
+        notifySaveError(error.message, sender.tab?.id);
+        sendResponse({
+          success: false,
+          status: error.status || 500,
+          error: error.message || 'SERVER_ERROR',
+          message: error.message || 'Could not save flashcard.'
+        });
       }
     })();
     return true; // Keep message channel open

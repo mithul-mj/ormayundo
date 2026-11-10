@@ -1,77 +1,67 @@
 import { BookOpen, Tag, BarChart3, Layers, Flame, ShieldCheck } from 'lucide-react';
+import ModernCard from './ModernCard';
+import ScrollReveal from './ScrollReveal';
 
 const features = [
   {
     icon: BookOpen,
-    color: 'bg-brand/10 text-brand',
-    title: 'Active Recall Prompts',
-    desc: 'Rather than memorizing verbatim text, Ormayundo formulates questions that test conceptual mechanics.',
+    title: 'Smart Question Generation',
+    desc: 'Instead of passive re-reading, Ormayundo creates questions that challenge your recall and deepen understanding.',
   },
   {
     icon: Tag,
-    color: 'bg-amber-50 text-amber-600',
-    title: 'Smart Deck Categorization',
-    desc: 'Automatically organizes flashcards into fitting subject decks like Node.js, JavaScript, NoSQL, or DSA.',
+    title: 'Automatic Topic Folders',
+    desc: 'Cards are automatically organized into folders by subject so your library stays neat without manual work.',
   },
   {
     icon: BarChart3,
-    color: 'bg-emerald-50 text-success',
-    title: 'Retention & Heatmap Analytics',
-    desc: 'Track study streaks, retention rates, and card mastery breakdowns with GitHub-style activity heatmaps.',
+    title: 'Visual Progress Charts',
+    desc: 'See your daily study streaks, retention score, and upcoming reviews with simple, encouraging graphs.',
   },
   {
     icon: Layers,
-    color: 'bg-blue-50 text-blue-600',
-    title: 'Table & Code Structure',
-    desc:
-      'HTML tables and code fragments are extracted cleanly into markdown format without formatting loss.',
+    title: 'Clean Formatting',
+    desc: 'Code snippets, bullet points, and tables keep their exact format so complex notes stay readable.',
   },
   {
     icon: Flame,
-    color: 'bg-rose-50 text-brand',
-    title: 'Streak Habit Building',
-    desc: 'Build a daily learning ritual. Celebrate study milestones with streak tracking and confetti rewards.',
+    title: 'Daily Study Streaks',
+    desc: 'Build a rewarding daily habit with streak milestones, study celebrations, and confetti rewards.',
   },
   {
     icon: ShieldCheck,
-    color: 'bg-purple-50 text-purple-600',
-    title: 'Privacy by Architecture',
-    desc: 'We never monitor or log browsing history. Only text you deliberately highlight and save is transmitted.',
+    title: '100% Private & Safe',
+    desc: 'We never monitor or track your browsing. Only the text you intentionally highlight and save is stored.',
   },
 ];
 
 export default function FeaturesGrid() {
   return (
-    <section id="features" className="py-20 bg-surface border-t border-divider">
+    <section id="features" className="py-10 sm:py-20 md:py-24 bg-neutral-50/60 border-t border-neutral-200/80">
       <div className="max-w-6xl mx-auto px-4 sm:px-8">
-        <div className="text-center mb-16">
-          <span className={
-      [
-        'text-[11px] font-bold text-brand tracking-widest uppercase bg-brand/10',
-        'px-3.5 py-1.5 rounded-full'
-      ].join(' ')
-    }>
-            Engineered for Mastery
+        <ScrollReveal className="text-center mb-8 sm:mb-14">
+          <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-brand mb-2">
+            Features
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight mt-3 mb-3">
-            Built for serious learners & developers
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-neutral-950 tracking-tight mb-2 sm:mb-3">
+            Everything you need to learn faster and remember longer
           </h2>
-        </div>
+          <p className="text-neutral-600 max-w-lg mx-auto text-xs sm:text-base leading-relaxed">
+            Built for students, developers, and avid readers who want what they learn to stick.
+          </p>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((f) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+          {features.map((f, idx) => {
             const Icon = f.icon;
             return (
-              <div
-                key={f.title}
-                className="p-6 sm:p-7 rounded-3xl bg-white/80 hover:bg-white transition-all space-y-3 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
-              >
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${f.color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-ink text-base">{f.title}</h4>
-                <p className="text-muted text-xs sm:text-sm leading-relaxed">{f.desc}</p>
-              </div>
+              <ScrollReveal key={f.title} delay={idx * 60}>
+                <ModernCard className="p-5 sm:p-6 space-y-2.5 sm:space-y-3 h-full">
+                  <Icon className="w-5 h-5 text-neutral-900" />
+                  <h4 className="font-bold text-neutral-950 text-sm sm:text-base tracking-tight">{f.title}</h4>
+                  <p className="text-neutral-600 text-xs sm:text-sm leading-relaxed">{f.desc}</p>
+                </ModernCard>
+              </ScrollReveal>
             );
           })}
         </div>

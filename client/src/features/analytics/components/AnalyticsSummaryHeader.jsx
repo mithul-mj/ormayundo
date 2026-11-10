@@ -1,95 +1,223 @@
-import { Flame } from 'lucide-react';
-
 export default function AnalyticsSummaryHeader({
-  totalCards,
-  additionStreak,
-  maxStreak,
-  retentionRate,
+  totalCards = 0,
+  additionStreak = 0,
+  maxStreak = 0,
+  retentionRate = 100,
+  dueTodayCount = 0,
+  onNavigateToReview,
+  formattedDate,
 }) {
-  const safeRetention = Number(retentionRate) || 0;
-  const strokeOffset = 125.6 - (safeRetention / 100) * 125.6;
+  const safeRetention = Math.max(0, Math.min(100, Math.round(Number(retentionRate) || 0)));
 
   return (
-    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Your Brain Dashboard</h1>
-        <p className="text-gray-500 mt-1">Total Flashcards: {totalCards || 0}</p>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      {/* Title & Subtitle */}
+      <section className="rise" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 'clamp(28px, 4vw, 40px)',
+            lineHeight: 1.1,
+            fontWeight: 700,
+            letterSpacing: '-0.035em',
+          }}
+        >
+          Your Brain Dashboard
+        </h1>
+        <p style={{ margin: 0, fontSize: '15px', color: 'var(--brain-muted)' }}>
+          {totalCards} {totalCards === 1 ? 'flashcard' : 'flashcards'} · {formattedDate}
+        </p>
+      </section>
 
-      <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-        {/* Streak Card */}
-        <div className="bg-white px-6 py-4 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-divider/30 flex items-center gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all relative overflow-hidden">
-          <div className="text-brand-light">
-            <Flame className="w-8 h-8 fill-brand-light/20" />
+      {/* KPI Metric Strip */}
+      <section
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+        }}
+      >
+        {/* 1. Creation streak */}
+        <div
+          className="rise"
+          style={{
+            '--d': '0.1s',
+            flex: '1 1 240px',
+            padding: '24px 24px 24px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            cursor: 'default',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--brain-muted)',
+            }}
+          >
+            Creation streak
+          </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '44px',
+                fontWeight: 600,
+                letterSpacing: '-0.04em',
+                lineHeight: 1,
+              }}
+            >
+              {additionStreak}
+            </span>
+            <span style={{ fontSize: '14px', color: 'var(--brain-muted)' }}>
+              {additionStreak === 1 ? 'day' : 'days'} · best {maxStreak}
+            </span>
           </div>
-          <div>
-            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-1">
-              Creation Streak
-            </p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-ink tracking-tighter">
-                {additionStreak || 0}
-              </p>
-              <span className="text-xs font-bold text-brand-light bg-brand-light/10 border border-brand-light/20 px-2 py-0.5 rounded-full shadow-xs">
-                Max {maxStreak || 0}
+        </div>
+
+        {/* 2. Retention rate */}
+        <div
+          className="rise sm:border-l border-[var(--brain-line)]"
+          style={{
+            '--d': '0.2s',
+            flex: '1 1 240px',
+            padding: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            cursor: 'default',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--brain-muted)',
+              }}
+            >
+              Retention rate
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+              <span
+                style={{
+                  fontSize: '44px',
+                  fontWeight: 600,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 1,
+                }}
+              >
+                {safeRetention}
+              </span>
+              <span style={{ fontSize: '20px', color: 'var(--brain-muted)' }}>%</span>
+            </div>
+          </div>
+
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 64 64"
+            role="img"
+            aria-label={`Retention rate ${safeRetention} percent`}
+          >
+            <circle
+              cx="32"
+              cy="32"
+              r="26"
+              fill="none"
+              style={{ stroke: 'var(--brain-track)' }}
+              strokeWidth="5"
+            />
+            {safeRetention > 0 && (
+              <circle
+                className="seg"
+                pathLength="100"
+                cx="32"
+                cy="32"
+                r="26"
+                fill="none"
+                style={{
+                  stroke: 'var(--brain-accent)',
+                  '--v': safeRetention,
+                  '--d': '0.5s',
+                }}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={`${safeRetention} 100`}
+                transform="rotate(-90 32 32)"
+              />
+            )}
+          </svg>
+        </div>
+
+        {/* 3. Due today */}
+        <div
+          className="rise lg:border-l border-[var(--brain-line)]"
+          style={{
+            '--d': '0.3s',
+            flex: '1 1 240px',
+            padding: '24px 0 24px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            cursor: 'default',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--brain-muted)',
+              }}
+            >
+              Due today
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '44px',
+                  fontWeight: 600,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 1,
+                }}
+              >
+                {dueTodayCount}
+              </span>
+              <span style={{ fontSize: '14px', color: 'var(--brain-muted)' }}>
+                {dueTodayCount === 1 ? 'card' : 'cards'}
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Retention Card */}
-        <div className="bg-white px-6 py-4 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-divider/30 flex items-center gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all relative overflow-hidden">
-          <div className="flex items-center justify-center">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 48 48"
-              className="transform -rotate-90 drop-shadow-sm"
-            >
-              <circle
-                cx="24"
-                cy="24"
-                r="20"
-                stroke="#f3f4f6"
-                strokeWidth="6"
-                fill="transparent"
-              />
-              <circle
-                cx="24"
-                cy="24"
-                r="20"
-                stroke="url(#retentionGradient)"
-                strokeWidth="6"
-                fill="transparent"
-                strokeDasharray="125.6"
-                strokeDashoffset={strokeOffset}
-                strokeLinecap="round"
-                className="transition-all duration-1000 ease-out"
-              />
-              <defs>
-                <linearGradient id="retentionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#34d399" />
-                  <stop offset="100%" stopColor="#059669" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div className="relative z-10">
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">
-              Retention Rate
-            </p>
-            <p className={
-      [
-        'text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br',
-        'from-gray-800 to-gray-600 tracking-tighter'
-      ].join(' ')
-    }>
-              {retentionRate || 0}
-              <span className="text-xl text-gray-400 font-bold ml-0.5">%</span>
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onNavigateToReview}
+            style={{
+              border: 0,
+              padding: '11px 22px',
+              borderRadius: '999px',
+              background: 'var(--brain-accent)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            className="hover:opacity-90 active:scale-95 shadow-xs"
+          >
+            Review
+          </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -117,7 +117,12 @@ const Dashboard = ({ onLogout }) => {
   const handleReview = async (rating) => {
     const card = dueCards[currentCardIndex];
     try {
-      await api.post(`/recall/${card._id}/review`, { rating });
+      const timezone = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
+      await api.post(
+        `/recall/${card._id}/review`,
+        { rating, timezone },
+        { headers: { 'x-timezone': timezone } }
+      );
 
       // Move to next card
       setIsFlipped(false);

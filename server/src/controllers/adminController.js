@@ -9,11 +9,31 @@ import { sendPushNotification } from '../services/pushService.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
 import { PAGINATION, SYSTEM_METRICS } from '../utils/constants.js';
 
+// In-memory stats cache to avoid expensive collection-wide aggregations on repeated requests
+let cachedStats = null;
+let lastStatsTime = 0;
+const STATS_CACHE_TTL_MS = 20 * 1000; // 20 seconds cache
+
+export const invalidateAdminStatsCache = () => {
+  cachedStats = null;
+  lastStatsTime = 0;
+};
+
 // 1. High-level Overview Dashboard Statistics
 export const getAdminStats = async (req, res) => {
   try {
+    const now = Date.now();
+    if (cachedStats && (now - lastStatsTime < STATS_CACHE_TTL_MS) && !req.query.force) {
+      res.set('Cache-Control', 'private, max-age=15');
+      return res.status(STATUS_CODES.OK).json(cachedStats);
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
 
     const [
       totalUsers,
@@ -24,6 +44,8 @@ export const getAdminStats = async (req, res) => {
       totalDecks,
       topDecksAgg,
       tokenAgg,
+      dailyTokenAgg,
+      totalFcmDevices,
       activeTodayCount,
       jobCounts,
       unresolvedIncidentsCount
@@ -52,6 +74,24 @@ export const getAdminStats = async (req, res) => {
           }
         }
       ]),
+      TokenUsage.aggregate([
+        { $match: { createdAt: { $gte: fourteenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            totalTokens: { $sum: '$totalTokens' },
+            promptTokens: { $sum: '$promptTokens' },
+            completionTokens: { $sum: '$completionTokens' },
+            estimatedCost: { $sum: '$estimatedCost' },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      User.aggregate([
+        { $project: { tokenCount: { $size: { $ifNull: ['$fcmTokens', []] } } } },
+        { $group: { _id: null, total: { $sum: '$tokenCount' } } }
+      ]),
       User.countDocuments({ lastAddedDate: { $gte: today } }),
       aiQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed').catch(() => ({
         waiting: 0,
@@ -71,7 +111,7 @@ export const getAdminStats = async (req, res) => {
       count: 0
     };
 
-    res.status(STATUS_CODES.OK).json({
+    const statsPayload = {
       users: {
         total: totalUsers,
         blocked: blockedUsers,
@@ -93,13 +133,29 @@ export const getAdminStats = async (req, res) => {
         promptTokens: tokenStats.promptTokens,
         completionTokens: tokenStats.completionTokens,
         estimatedCost: Number(tokenStats.estimatedCost.toFixed(SYSTEM_METRICS.COST_DECIMALS)),
-        totalGenerations: tokenStats.count
+        totalGenerations: tokenStats.count,
+        daily: dailyTokenAgg.map((d) => ({
+          date: d._id,
+          totalTokens: d.totalTokens,
+          promptTokens: d.promptTokens,
+          completionTokens: d.completionTokens,
+          cost: Number(d.estimatedCost.toFixed(SYSTEM_METRICS.COST_DECIMALS)),
+          count: d.count
+        }))
       },
       queue: jobCounts,
+      notifications: {
+        totalRegisteredDevices: totalFcmDevices[0]?.total || 0
+      },
       incidents: {
         unresolved: unresolvedIncidentsCount
       }
-    });
+    };
+
+    cachedStats = statsPayload;
+    lastStatsTime = now;
+    res.set('Cache-Control', 'private, max-age=15');
+    res.status(STATUS_CODES.OK).json(statsPayload);
   } catch (error) {
     console.error('[Admin] getAdminStats error:', error);
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });

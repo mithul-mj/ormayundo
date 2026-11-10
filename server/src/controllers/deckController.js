@@ -28,6 +28,7 @@ export const getDecks = async (req, res) => {
       decks = [defaultDeck];
     }
 
+    res.set('Cache-Control', 'private, max-age=60');
     res.status(STATUS_CODES.OK).json(decks);
   } catch (error) {
     console.error('[Deck Controller] Error fetching decks:', error);

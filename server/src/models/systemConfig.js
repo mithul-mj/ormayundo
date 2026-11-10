@@ -67,7 +67,19 @@ const systemConfigSchema = new mongoose.Schema({
   alertWebhookUrl: {
     type: String,
     default: ''
-  }
+  },
+  apiSlots: [
+    {
+      slotId: { type: String, required: true },
+      name: { type: String, default: 'Key Slot' },
+      provider: { type: String, default: 'groq' },
+      apiKey: { type: String, default: '' },
+      baseUrl: { type: String, default: 'https://api.groq.com/openai/v1' },
+      model: { type: String, default: 'llama-3.3-70b-versatile' },
+      isActive: { type: Boolean, default: true },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true });
 
 // In-memory cache to prevent database reads on every single AI request or guardrail check

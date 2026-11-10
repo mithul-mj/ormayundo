@@ -10,9 +10,10 @@ export default function Auth({ onLoginSuccess, onBack }) {
   const handleSuccess = async (credentialResponse) => {
     try {
       setError('');
+      const token = credentialResponse?.credential || credentialResponse?.access_token;
       const { data } = await axios.post(
         `${API_URL}/auth/google`,
-        { token: credentialResponse.credential },
+        { token },
         { withCredentials: true }
       );
       onLoginSuccess(data);
@@ -24,7 +25,7 @@ export default function Auth({ onLoginSuccess, onBack }) {
 
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen flex flex-col md:flex-row bg-white animate-fade-in">
+      <div className="min-h-screen flex flex-col lg:flex-row bg-white animate-fade-in">
         <AuthHeroBanner />
         <AuthLoginForm
           error={error}

@@ -1,136 +1,131 @@
-import { Download, Laptop, Check, Copy } from 'lucide-react';
+import { Download, Laptop, Check, Copy, CheckCircle2 } from 'lucide-react';
+import ModernCard from './ModernCard';
+import ScrollReveal from './ScrollReveal';
 
 export default function DownloadSection({ copiedStep, onCopyChromeUrl }) {
   return (
-    <section id="download" className="py-20 bg-surface border-y border-divider">
-      <div className="max-w-4xl mx-auto px-4 sm:px-8">
-        <div className={
-      [
-        'bg-white border border-border-card rounded-3xl p-8 sm:p-12',
-        'shadow-[0_12px_32px_rgba(0,0,0,0.08)]'
-      ].join(' ')
-    }>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-            {/* Left Column */}
-            <div className="md:col-span-7 space-y-4">
-              <div className={
-      [
-        'inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10',
-        'text-brand text-xs font-bold'
-      ].join(' ')
-    }>
-                <Download className="w-3.5 h-3.5" />
-                Direct Download • Chrome, Edge, Brave, Opera
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
-                Download the Extension
-              </h2>
-              <p className="text-muted text-sm leading-relaxed">
-                Download the unpacked Chrome extension ZIP. 100% free, private,
-                and compatible with all Chromium browsers.
-              </p>
-
-              <div className="pt-2">
-                <a
-                  href="/ormayundo-extension.zip"
-                  download="ormayundo-extension.zip"
-                  className={
-      [
-        'inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full',
-        'bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-md',
-        'shadow-brand/25 active:scale-95 transition-all cursor-pointer'
-      ].join(' ')
-    }
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download ormayundo-extension.zip</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Right Column: Step-by-Step Installation */}
-            <div className={
-      [
-        'md:col-span-5 bg-surface border border-divider rounded-2xl p-5 space-y-3.5',
-        'text-xs text-muted'
-      ].join(' ')
-    }>
-              <h4 className="font-bold text-sm text-ink flex items-center gap-2 pb-2 border-b border-divider">
-                <Laptop className="w-4 h-4 text-brand" />
-                Installation in 3 steps:
-              </h4>
-
-              <div className="flex gap-3">
-                <span className={
-      [
-        'w-5 h-5 rounded-full bg-ink text-white font-bold flex items-center',
-        'justify-center shrink-0 text-[10px]'
-      ].join(' ')
-    }>
-                  1
-                </span>
-                <p>
-                  <strong className="text-ink">Extract</strong> the downloaded{' '}
-                  <code className="bg-gray-200 px-1 py-0.5 rounded text-ink font-mono">
-                    ormayundo-extension.zip
-                  </code>{' '}
-                  file.
-                </p>
-              </div>
-
-              <div className="flex gap-3 items-center">
-                <span className={
-      [
-        'w-5 h-5 rounded-full bg-ink text-white font-bold flex items-center',
-        'justify-center shrink-0 text-[10px]'
-      ].join(' ')
-    }>
-                  2
-                </span>
-                <div className="flex-1">
-                  <span>
-                    Open{' '}
-                    <code className="bg-gray-200 px-1.5 py-0.5 rounded text-ink font-mono">
-                      chrome://extensions
-                    </code>
+    <section id="download" className="py-10 sm:py-20 md:py-24 bg-neutral-50/60 border-y border-neutral-200/80">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8">
+        <ScrollReveal>
+          <ModernCard hover={false} className="p-5 sm:p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+              {/* Left Column: Heading, Value Prop & Download Button */}
+              <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
+                <div>
+                  <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-brand mb-1.5">
+                    Free Browser Extension
                   </span>
+                  <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-neutral-950 tracking-tight">
+                    Download the Extension
+                  </h2>
                 </div>
-                <button
-                  onClick={onCopyChromeUrl}
-                  className={
-      [
-        'px-2.5 py-1 rounded-full bg-white hover:bg-gray-100 text-ink font-bold',
-        'text-[10px] border border-border-card flex items-center gap-1',
-        'transition-colors cursor-pointer shrink-0'
-      ].join(' ')
-    }
-                >
-                  {copiedStep ? (
-                    <Check className="w-3 h-3 text-success" />
-                  ) : (
-                    <Copy className="w-3 h-3" />
-                  )}
-                  <span>{copiedStep ? 'Copied' : 'Copy'}</span>
-                </button>
+
+                <p className="text-neutral-600 text-xs sm:text-sm leading-relaxed">
+                  Capture highlights and review flashcards without ever leaving your active browser tab.
+                  Lightweight, 100% private, and works seamlessly across all Chromium browsers.
+                </p>
+
+                <div className="pt-1">
+                  <a
+                    href="/ormayundo-extension.zip"
+                    download="ormayundo-extension.zip"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-neutral-900 hover:bg-black text-white font-semibold text-xs sm:text-sm shadow-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline whitespace-nowrap">Download ormayundo-extension.zip</span>
+                    <span className="sm:hidden whitespace-nowrap">Download Extension (.ZIP)</span>
+                  </a>
+                </div>
+
+                {/* Supported Browsers */}
+                <div className="pt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-neutral-500">Works on</span>
+                  <span className="font-semibold text-neutral-900">Chrome</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="font-semibold text-neutral-900">Brave</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="font-semibold text-neutral-900">Edge</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="font-semibold text-neutral-900">Opera</span>
+                  <span className="text-neutral-400 text-[11px] hidden sm:inline">(all Chromium browsers)</span>
+                </div>
               </div>
 
-              <div className="flex gap-3">
-                <span className={
-      [
-        'w-5 h-5 rounded-full bg-ink text-white font-bold flex items-center',
-        'justify-center shrink-0 text-[10px]'
-      ].join(' ')
-    }>
-                  3
-                </span>
-                <p>
-                  Enable <strong className="text-ink">Developer mode</strong> (top-right), click{' '}
-                  <strong className="text-ink">Load unpacked</strong>, and choose the extracted folder.
-                </p>
+              {/* Right Column: Step-by-Step Installation Box */}
+              <div className="lg:col-span-6 bg-neutral-50/80 border border-neutral-200/90 rounded-2xl p-5 sm:p-6 space-y-4 text-xs text-neutral-600">
+                <div className="flex items-center gap-2 pb-3 border-b border-neutral-200/80">
+                  <Laptop className="w-4 h-4 text-neutral-700 shrink-0" />
+                  <h4 className="font-semibold text-xs uppercase tracking-wider text-neutral-900">
+                    Quick 30-Second Setup:
+                  </h4>
+                </div>
+
+                {/* Step 1 */}
+                <div className="flex gap-2.5 items-baseline">
+                  <span className="font-mono font-bold text-neutral-900 text-xs shrink-0">
+                    1.
+                  </span>
+                  <p>
+                    <strong className="text-neutral-900 font-semibold">Extract</strong> the downloaded{' '}
+                    <code className="bg-neutral-200/70 px-1.5 py-0.5 rounded text-neutral-900 font-mono text-[11px] whitespace-nowrap">
+                      ormayundo-extension.zip
+                    </code>
+                  </p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="font-mono font-bold text-neutral-900 text-xs shrink-0">
+                    2.
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span>
+                      Open{' '}
+                      <code className="bg-neutral-200/70 px-1.5 py-0.5 rounded text-neutral-900 font-mono text-[11px] whitespace-nowrap">
+                        chrome://extensions
+                      </code>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onCopyChromeUrl}
+                    className="px-2.5 py-1 rounded-full bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-[10px] border border-neutral-200 flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                  >
+                    {copiedStep ? (
+                      <Check className="w-3 h-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>{copiedStep ? 'Copied' : 'Copy URL'}</span>
+                  </button>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex gap-2.5 items-baseline">
+                  <span className="font-mono font-bold text-neutral-900 text-xs shrink-0">
+                    3.
+                  </span>
+                  <p>
+                    Turn on{' '}
+                    <span className="font-semibold text-neutral-900">Developer mode</span> (top right toggle).
+                  </p>
+                </div>
+
+                {/* Step 4 */}
+                <div className="flex gap-2.5 items-baseline">
+                  <span className="font-mono font-bold text-neutral-900 text-xs shrink-0">
+                    4.
+                  </span>
+                  <p>
+                    Click{' '}
+                    <span className="font-semibold text-neutral-900">Load unpacked</span> and select the extracted folder.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </ModernCard>
+        </ScrollReveal>
       </div>
     </section>
   );

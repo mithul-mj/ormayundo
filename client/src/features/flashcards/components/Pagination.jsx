@@ -4,12 +4,12 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-center gap-6 mt-8 mb-4">
+    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-6 mt-8 mb-4">
       <button
         onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
         disabled={currentPage === 1}
         className={[
-          'flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300',
+          'flex items-center gap-1 px-3 sm:px-4 py-2 rounded-full font-bold text-xs sm:text-sm transition-all duration-300',
           currentPage === 1
             ? 'text-gray-300 cursor-not-allowed'
             : [
@@ -22,23 +22,18 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
       </button>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-gray-400">Page</span>
-        <span className={
-      [
-        'w-8 h-8 flex items-center justify-center bg-gray-900 text-white',
-        'rounded-full font-bold text-sm shadow-md'
-      ].join(' ')
-    }>
+        <span className="text-xs sm:text-sm font-semibold text-gray-400">Page</span>
+        <span className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-gray-900 text-white rounded-full font-bold text-xs sm:text-sm shadow-md">
           {currentPage}
         </span>
-        <span className="text-sm font-semibold text-gray-400">of {totalPages}</span>
+        <span className="text-xs sm:text-sm font-semibold text-gray-400">of {totalPages}</span>
       </div>
 
       <button
         onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
         disabled={currentPage === totalPages}
         className={[
-          'flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all duration-300',
+          'flex items-center gap-1 px-3 sm:px-4 py-2 rounded-full font-bold text-xs sm:text-sm transition-all duration-300',
           currentPage === totalPages
             ? 'text-gray-300 cursor-not-allowed'
             : [

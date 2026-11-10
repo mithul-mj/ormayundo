@@ -40,14 +40,18 @@ export const initWebPush = async (apiUrl) => {
     });
 
     if (token) {
-      console.log('[WebPush] Web FCM Token acquired. Syncing with backend...');
-      await fetch(`${apiUrl}/auth/fcm-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ token }),
-      });
-      console.log('[WebPush]', MESSAGES.SUCCESS.TOKEN_SYNCED);
+      const lastSyncedToken = localStorage.getItem('ormayundo_synced_fcm_token');
+      if (lastSyncedToken !== token) {
+        console.log('[WebPush] Web FCM Token acquired. Syncing with backend...');
+        await fetch(`${apiUrl}/auth/fcm-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ token }),
+        });
+        localStorage.setItem('ormayundo_synced_fcm_token', token);
+        console.log('[WebPush]', MESSAGES.SUCCESS.TOKEN_SYNCED);
+      }
     }
 
     // 4. Listen for incoming foreground messages

@@ -1,22 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "./theme.css";
 
+html,
 body {
   margin: 0;
-  background-color: var(--color-surface);
-  background-image: radial-gradient(rgba(255, 56, 92, 0.08) 1px, transparent 1px);
-  background-size: 32px 32px;
-  font-family: "Outfit", sans-serif;
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+  background-color: #FAFAFA;
+  color: #171717;
+  font-family: "Plus Jakarta Sans", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Beautiful Markdown Tables for Flashcards */
 .markdown-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1rem 0;
-  font-size: 0.875rem;
+  margin: 0.75rem 0;
+  font-size: 0.8125rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border-radius: 12px;
   overflow: hidden;
@@ -25,8 +36,19 @@ body {
 .markdown-table th,
 .markdown-table td {
   border: 1px solid #f3f4f6;
-  padding: 16px 20px;
+  padding: 10px 12px;
   text-align: left;
+}
+
+@media (min-width: 640px) {
+  .markdown-table {
+    margin: 1rem 0;
+    font-size: 0.875rem;
+  }
+  .markdown-table th,
+  .markdown-table td {
+    padding: 14px 18px;
+  }
 }
 
 .markdown-table th {
@@ -75,4 +97,101 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Brain Dashboard Custom Diagram Presentation */
+:root {
+  --brain-bg: #FAFAF8;
+  --brain-surface: #FFFFFF;
+  --brain-track: #EEF0F3;
+  --brain-bar: #D3D7DE;
+  --brain-line: rgba(15, 18, 25, 0.08);
+  --brain-text: #111318;
+  --brain-muted: #667085;
+  --brain-amber: #E8A33D;
+  --brain-green: #3FB68B;
+  --brain-blue: #5B8DEF;
+  --brain-red: #E5646E;
+  --brain-accent: #D92D4A;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes growx {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes drawline {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes seg {
+  from { stroke-dasharray: 0 100; }
+  to { stroke-dasharray: var(--v) 100; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.2); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+.rise {
+  animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.fade {
+  animation: fade 0.8s ease both;
+  animation-delay: var(--d, 0s);
+}
+.bar {
+  transform-origin: bottom;
+  animation: grow 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+  transition: filter 0.2s;
+}
+.bar:hover {
+  filter: brightness(1.1);
+}
+.hbar {
+  transform-origin: left;
+  animation: growx 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.line {
+  stroke-dasharray: 1;
+  animation: drawline 2s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+.seg {
+  animation: seg 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.ping {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse 2.4s ease-out infinite 2.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .fade, .bar, .hbar, .line, .seg, .dot, .ping {
+    animation: none !important;
+  }
 }

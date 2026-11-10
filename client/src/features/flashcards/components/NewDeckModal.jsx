@@ -33,9 +33,7 @@ export default function NewDeckModal({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-light/10">
-              <FolderPlus className="w-4 h-4 text-brand-light" />
-            </div>
+            <FolderPlus className="w-5 h-5 text-brand" />
             <h2 className="text-sm font-bold text-gray-800">Create New Deck</h2>
           </div>
           <button

@@ -10,4 +10,5 @@ export { default as FeaturesGrid } from './FeaturesGrid';
 export { default as CtaBanner } from './CtaBanner';
 export { default as Footer } from './Footer';
 export { default as ImageModal } from './ImageModal';
-
+export { default as ModernCard } from './ModernCard';
+export { default as ScrollReveal } from './ScrollReveal';

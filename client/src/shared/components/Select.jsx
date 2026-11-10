@@ -100,7 +100,7 @@ export default function Select({
           disabled ? 'opacity-50 cursor-not-allowed' : '',
         ].join(' ')}
       >
-        <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center gap-2 min-w-0">
           {selectedOption?.icon && (
             <span className="shrink-0 text-muted">{selectedOption.icon}</span>
           )}
@@ -108,7 +108,7 @@ export default function Select({
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           {selectedOption?.badge && (
-            <span className="px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[10px] font-bold shrink-0">
               {selectedOption.badge}
             </span>
           )}
@@ -126,7 +126,7 @@ export default function Select({
       {isOpen && (
         <div
           className={[
-            'absolute mt-1.5 z-50 bg-white border border-divider rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-1.5 min-w-full sm:min-w-[190px] max-h-64 overflow-y-auto animate-fade-in',
+            'absolute mt-1.5 z-50 bg-white border border-divider rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-1.5 min-w-full sm:min-w-[190px] max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto animate-fade-in',
             align === 'right' ? 'right-0' : 'left-0',
             menuClassName,
           ].join(' ')}
