@@ -27,7 +27,7 @@ export default function LandingPage({ onGetStarted, isAuthenticated }) {
   return (
     <div className={
       [
-        'min-h-screen bg-white text-ink flex flex-col font-sans overflow-x-hidden',
+        'min-h-screen bg-white text-ink flex flex-col font-sans overflow-x-clip',
         'selection:bg-brand/15 selection:text-brand'
       ].join(' ')
     }>
