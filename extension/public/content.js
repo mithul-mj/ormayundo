@@ -239,9 +239,7 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
           showToast({
             type: 'warning',
             title: 'Login Required',
-            message: 'Please log in to Ormayundo to save flashcards to your deck.',
-            actionLabel: 'Log In',
-            onAction: () => chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' })
+            message: 'Please log in to Ormayundo to save flashcards to your deck.'
           });
           if (floatingBtn && floatingBtn.parentNode) {
             document.body.removeChild(floatingBtn);
@@ -289,9 +287,7 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
               showToast({
                 type: 'warning',
                 title: 'Login Required',
-                message: 'Your session expired. Please log in to Ormayundo to save this flashcard.',
-                actionLabel: 'Log In',
-                onAction: () => chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' })
+                message: 'Your session expired. Please log in to Ormayundo to save this flashcard.'
               });
 
               setTimeout(() => {
@@ -421,12 +417,10 @@ if (window.__ormayundoLoaded || window.location.hostname.includes('ormayundo-app
         type: request.type || 'info',
         title: request.title || (request.type === 'auth_error' ? 'Login Required' : 'Ormayundo'),
         message: request.message,
-        actionLabel: request.actionLabel || (request.type === 'auth_error' ? 'Log In' : null),
-        onAction: () => {
-          if (request.type === 'auth_error' || request.actionLabel === 'Log In') {
-            chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' });
-          }
-        }
+        actionLabel: request.actionLabel || null,
+        onAction: request.actionLabel ? () => {
+          chrome.runtime.sendMessage({ action: 'OPEN_LOGIN' });
+        } : null
       });
       sendResponse({ received: true });
     }

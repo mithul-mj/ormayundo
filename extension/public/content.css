@@ -30,11 +30,15 @@
 }
 
 #ormayundo-floating-btn.logged-out {
-  background-color: #1F2937;
+  background-color: #EF4444;
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
 }
 
 #ormayundo-floating-btn.logged-out:hover {
-  background-color: #111827;
+  background-color: #DC2626;
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
 }
 
 #ormayundo-toast-container {

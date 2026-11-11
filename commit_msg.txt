@@ -1,0 +1,6 @@
+fix(extension): style unauthenticated popup in red, remove toast button, and update extension zip
+
+- Styled #ormayundo-floating-btn.logged-out with bright alert red (#EF4444)
+- Removed redundant 'Log In' button from the bottom-right toast
+- Rebuilt extension production assets in extension/dist
+- Packaged fresh ormayundo-extension.zip into client/public and rebuilt client
