@@ -1,6 +1,10 @@
 export default function AuthHeroBanner() {
   return (
-    <div className="lg:flex-1 bg-gradient-to-br from-brand to-rose-600 flex flex-col justify-center p-8 sm:p-12 lg:p-16 text-white relative">
+    <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-brand to-rose-600 flex-col justify-center p-8 sm:p-12 lg:p-16 text-white relative overflow-hidden">
+      {/* Decorative ambient background rings / glow */}
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-black/10 rounded-full blur-3xl pointer-events-none" />
+
       <div className="relative z-10 max-w-lg">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
           Remember everything you read.

@@ -12,7 +12,36 @@ const NAV_LINKS = [
 export default function Navbar({ isAuthenticated, onGetStarted }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const navContainerRef = useRef(null);
   const lastScrollYRef = useRef(0);
+
+  // Modern click/touch outside listener & Escape key handler
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handlePointerDown = (event) => {
+      // If clicking inside the capsule bar or dropdown menu, do not close
+      if (navContainerRef.current && navContainerRef.current.contains(event.target)) {
+        return;
+      }
+      setMobileMenuOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    // Use pointerdown for zero-delay touch responsiveness on mobile
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   // Auto-hide on scroll down, reveal on scroll up
   useEffect(() => {
@@ -55,13 +84,23 @@ export default function Navbar({ isAuthenticated, onGetStarted }) {
   };
 
   return (
-    <header
-      className={[
-        'fixed top-3 sm:top-5 inset-x-0 z-50 pointer-events-none px-3 sm:px-6 transition-all duration-300 ease-in-out',
-        isVisible ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0',
-      ].join(' ')}
-    >
-      <div className="max-w-4xl lg:max-w-5xl mx-auto">
+    <>
+      {/* Modern Fullscreen Touch Backdrop for Mobile Menu Dismissal */}
+      {mobileMenuOpen && (
+        <div
+          aria-hidden="true"
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-neutral-950/20 backdrop-blur-[2px] z-40 pointer-events-auto md:hidden animate-fade-in transition-opacity"
+        />
+      )}
+
+      <header
+        className={[
+          'fixed top-3 sm:top-5 inset-x-0 z-50 pointer-events-none px-3 sm:px-6 transition-all duration-300 ease-in-out',
+          isVisible ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0',
+        ].join(' ')}
+      >
+        <div ref={navContainerRef} className="max-w-4xl lg:max-w-5xl mx-auto">
         {/* Floating Capsule Bar */}
         <div className="pointer-events-auto bg-white/85 backdrop-blur-xl border border-neutral-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-full px-3.5 sm:px-4 py-2 flex items-center justify-between gap-3 transition-all">
           {/* Brand Logo */}
@@ -151,5 +190,6 @@ export default function Navbar({ isAuthenticated, onGetStarted }) {
         )}
       </div>
     </header>
+  </>
   );
 }

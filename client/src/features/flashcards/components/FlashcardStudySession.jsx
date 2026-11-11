@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Confetti from 'react-confetti';
@@ -45,25 +45,46 @@ export default function FlashcardStudySession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [practiceAllMode, setPracticeAllMode] = useState(false);
 
-  // Filter cards due for review (or all cards if in practice all mode)
-  const studyQueue = useMemo(() => {
+  // Filter helper for due or all cards
+  const filterCards = useCallback((cardsList, deckFilter, practiceAll) => {
     const now = new Date();
-    let queue = cards;
-    if (selectedDeckFilter && selectedDeckFilter !== 'All') {
+    let queue = cardsList;
+    if (deckFilter && deckFilter !== 'All') {
       queue = queue.filter(
-        (c) => (c.deck || 'General').toLowerCase() === selectedDeckFilter.toLowerCase()
+        (c) => (c.deck || 'General').toLowerCase() === deckFilter.toLowerCase()
       );
     }
-
-    if (practiceAllMode) {
+    if (practiceAll) {
       return queue;
     }
-
     return queue.filter((c) => {
       if (!c.nextReviewAt) return true; // new cards are immediately due
       return new Date(c.nextReviewAt) <= now;
     });
-  }, [cards, selectedDeckFilter, practiceAllMode]);
+  }, []);
+
+  // Lock an immutable snapshot of the study queue for this session to avoid shifting under the user
+  const [sessionQueue, setSessionQueue] = useState(null);
+  const isInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isInitializedRef.current && (cards.length > 0 || flashcardsData)) {
+      isInitializedRef.current = true;
+      setSessionQueue(filterCards(cards, selectedDeckFilter, practiceAllMode));
+    }
+  }, [cards, flashcardsData, selectedDeckFilter, practiceAllMode, filterCards]);
+
+  const studyQueue = useMemo(() => {
+    return sessionQueue ?? filterCards(cards, selectedDeckFilter, practiceAllMode);
+  }, [sessionQueue, cards, selectedDeckFilter, practiceAllMode, filterCards]);
+
+  const handlePracticeAll = useCallback(() => {
+    const allQueue = filterCards(cards, selectedDeckFilter, true);
+    setSessionQueue(allQueue);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setPracticeAllMode(true);
+  }, [cards, selectedDeckFilter, filterCards]);
 
   const currentCard = studyQueue[currentIndex] || null;
   const isFinished = studyQueue.length > 0 && currentIndex >= studyQueue.length;
@@ -90,21 +111,30 @@ export default function FlashcardStudySession({
   }, [currentCard]);
 
   const handleRating = useCallback(
-    async (rating) => {
-      if (!currentCard || isSubmitting) return;
-      try {
-        setIsSubmitting(true);
-        await reviewMutation.mutateAsync({ id: currentCard._id, rating });
-        setReviewedCount((prev) => prev + 1);
-        setIsFlipped(false);
-        setCurrentIndex((prev) => prev + 1);
-      } catch (err) {
-        console.error('Failed to submit review:', err);
-      } finally {
-        setIsSubmitting(false);
-      }
+    (rating) => {
+      if (!currentCard) return;
+      const cardToReview = currentCard;
+
+      // Immediately reset flip state and advance index for zero-latency UI transition
+      setIsFlipped(false);
+      setCurrentIndex((prev) => prev + 1);
+      setReviewedCount((prev) => prev + 1);
+
+      // Submit rating to backend in background without freezing UI
+      setIsSubmitting(true);
+      reviewMutation.mutate(
+        { id: cardToReview._id, rating },
+        {
+          onError: (err) => {
+            console.error('Failed to submit review:', err);
+          },
+          onSettled: () => {
+            setIsSubmitting(false);
+          },
+        }
+      );
     },
-    [currentCard, isSubmitting, reviewMutation]
+    [currentCard, reviewMutation]
   );
 
   // Keyboard Navigation: Space = Flip, 1=Forgot, 2=Hard, 3=Good, 4=Easy, Esc = Exit
@@ -125,7 +155,7 @@ export default function FlashcardStudySession({
         return;
       }
 
-      if (isFlipped && !isSubmitting) {
+      if (isFlipped) {
         if (e.key === '1') handleRating('forgot');
         if (e.key === '2') handleRating('hard');
         if (e.key === '3') handleRating('good');
@@ -135,7 +165,7 @@ export default function FlashcardStudySession({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, isSubmitting, isFinished, isEmpty, handleRating, onClose]);
+  }, [isFlipped, isFinished, isEmpty, handleRating, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-fade-in">
@@ -207,10 +237,7 @@ export default function FlashcardStudySession({
                   Return to Dashboard
                 </button>
                 <button
-                  onClick={() => {
-                    setCurrentIndex(0);
-                    setPracticeAllMode(true);
-                  }}
+                  onClick={handlePracticeAll}
                   className="px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white font-semibold text-xs sm:text-sm border border-white/15 transition-all cursor-pointer flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -239,7 +266,7 @@ export default function FlashcardStudySession({
                   Back to Dashboard
                 </button>
                 <button
-                  onClick={() => setPracticeAllMode(true)}
+                  onClick={handlePracticeAll}
                   className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-neutral-300 text-xs font-semibold border border-white/10 cursor-pointer flex items-center gap-1.5"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -249,7 +276,10 @@ export default function FlashcardStudySession({
             </div>
           ) : (
             /* STATE 3: Interactive Study Card */
-            <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xl overflow-hidden flex flex-col min-h-[380px] sm:min-h-[440px] animate-fade-in">
+            <div
+              key={currentCard._id}
+              className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xl overflow-hidden flex flex-col min-h-[380px] sm:min-h-[440px] animate-fade-in"
+            >
               {/* Card Meta Bar */}
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-neutral-50/50">
                 <span

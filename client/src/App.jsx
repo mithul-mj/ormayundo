@@ -76,6 +76,19 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
+  // Global 401 Unauthorized eviction listener: resets active modals and redirects protected routes to login
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setIsStudySessionOpen(false);
+      if (currentPath === ROUTES.APP || currentPath === ROUTES.DASHBOARD) {
+        navigate(ROUTES.LOGIN);
+      }
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [currentPath]);
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };

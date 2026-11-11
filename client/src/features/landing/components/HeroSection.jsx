@@ -5,8 +5,8 @@ export default function HeroSection({ onGetStarted }) {
     <section className="relative pt-24 pb-12 sm:pt-32 sm:pb-20 md:pt-36 md:pb-24 overflow-hidden bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          {/* Left Column: Headline, Subtitle, CTAs & Features */}
-          <div className="lg:col-span-6 xl:col-span-6 text-center lg:text-left">
+          {/* Left Column: Headline, Subtitle, CTAs & Features (on mobile order-2, on desktop order-1) */}
+          <div className="order-2 lg:order-1 lg:col-span-6 xl:col-span-6 text-center lg:text-left">
             {/* High-Level Professional Modern Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-neutral-950 leading-[1.12] mb-4 sm:mb-6">
               <span className="inline-block">Remember everything</span>{' '}
@@ -59,12 +59,12 @@ export default function HeroSection({ onGetStarted }) {
             </div>
           </div>
 
-          {/* Right Column: 3D Hero Mockup Visual */}
-          <div className="lg:col-span-6 xl:col-span-6 relative mt-4 lg:mt-0 flex items-center justify-center select-none">
+          {/* Right Column: 3D Hero Mockup Visual (on mobile order-1 at top, on desktop order-2) */}
+          <div className="order-1 lg:order-2 lg:col-span-6 xl:col-span-6 relative mt-2 mb-2 lg:mt-0 lg:mb-0 flex items-center justify-center select-none">
             {/* Subtle ambient back-light bloom */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-4/5 bg-gradient-to-tr from-rose-100/50 via-brand/10 to-amber-100/40 blur-3xl -z-10 rounded-full pointer-events-none" />
 
-            <div className="relative w-full max-w-lg lg:max-w-none">
+            <div className="relative w-full max-w-sm sm:max-w-md lg:max-w-none">
               <img
                 src="/images/hero-illustration.png"
                 alt="Highlighting text on the web and converting it directly into active recall flashcards"
