@@ -1,7 +1,6 @@
 import { Pencil, Trash2, X, Save, Tag, ExternalLink } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import DeckDropdown from './DeckDropdown';
+import { MarkdownRenderer } from '../../../shared/components';
 
 const getSourceDomain = (url) => {
   if (!url) return '';
@@ -112,38 +111,7 @@ export default function FlashcardCard({
             />
           ) : (
             <div className="py-1 max-h-72 overflow-y-auto overflow-x-auto custom-scrollbar">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  table: ({ ...props }) => (
-                    <div className="w-full overflow-x-auto my-3 rounded-xl border border-gray-100">
-                      <table className="markdown-table !my-0 w-full" {...props} />
-                    </div>
-                  ),
-                  pre: ({ ...props }) => (
-                    <div className="w-full overflow-x-auto my-3 rounded-xl">
-                      <pre className="p-3 bg-gray-900 text-gray-100 rounded-xl text-xs font-mono" {...props} />
-                    </div>
-                  ),
-                  code: ({ inline, ...props }) =>
-                    inline ? (
-                      <code className="bg-gray-100 text-brand px-1.5 py-0.5 rounded text-xs font-mono break-all" {...props} />
-                    ) : (
-                      <code {...props} />
-                    ),
-                  a: ({ ...props }) => (
-                    <a
-                      className="text-brand-light font-medium hover:underline hover:text-brand transition-colors break-all"
-                      {...props}
-                    />
-                  ),
-                  p: ({ ...props }) => (
-                    <p className="text-gray-700 leading-relaxed mb-4 last:mb-0 break-words" {...props} />
-                  ),
-                }}
-              >
-                {card.selectedText}
-              </ReactMarkdown>
+              <MarkdownRenderer content={card.selectedText || ''} />
             </div>
           )}
         </div>

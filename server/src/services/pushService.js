@@ -21,6 +21,8 @@ try {
   console.log("Firebase Admin failed to initialize.", error.message);
 }
 
+let pushAuthWarned = false;
+
 export const sendPushNotification = async (fcmToken, title, body) => {
   try {
     const message = {
@@ -35,6 +37,19 @@ export const sendPushNotification = async (fcmToken, title, body) => {
       console.log(`[SIMULATED PUSH] Sent to ${fcmToken}: ${title} - ${body}`);
     }
   } catch (error) {
+    const isAuthError =
+      error.message?.includes('invalid_grant') ||
+      error.message?.includes('Invalid JWT Signature') ||
+      error.code === 'app/invalid-credential';
+
+    if (isAuthError) {
+      if (!pushAuthWarned) {
+        pushAuthWarned = true;
+        console.warn('[Push Service] Firebase service account credentials invalid or revoked (Invalid JWT Signature). Push notifications paused until credentials in server/config/firebase-service-account.json are renewed.');
+      }
+      return;
+    }
+
     console.error('Error sending push notification:', error.message);
 
     // Automatically remove dead/invalid tokens

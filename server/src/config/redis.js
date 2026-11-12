@@ -12,7 +12,7 @@ export const redisConnectionOptions = {
   connectTimeout: 10000,
   keepAlive: 30000,           // 30s TCP keep-alive to prevent zombie ghost connections
   retryStrategy(times) {
-    const delay = Math.min(times * 100, 3000);
+    const delay = Math.min(times * 500, 10000);
     return delay;
   }
 };
@@ -30,6 +30,7 @@ export const getBullMQConnectionOptions = () => {
 
 // Lazy singleton for standalone commands (only created if explicitly invoked)
 let standaloneClient = null;
+let lastLoggedErrorTime = 0;
 
 export const getRedisClient = () => {
   if (!standaloneClient) {
@@ -39,7 +40,11 @@ export const getRedisClient = () => {
     });
 
     standaloneClient.on('error', (err) => {
-      console.error('[Redis:Standalone] Connection Error:', err.message);
+      const now = Date.now();
+      if (now - lastLoggedErrorTime > 10000) {
+        lastLoggedErrorTime = now;
+        console.warn(`[Redis:Standalone] Connection issue: ${err.message} (retrying in background)`);
+      }
     });
 
     standaloneClient.on('connect', () => {

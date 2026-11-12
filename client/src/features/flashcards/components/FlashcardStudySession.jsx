@@ -1,6 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import Confetti from 'react-confetti';
 import {
   X,
@@ -14,6 +12,7 @@ import {
 } from 'lucide-react';
 import { calculateIntervalsForCard } from '../../../shared/services/spacedRepetition';
 import { useFlashcardsDataQuery, useReviewCardMutation } from '../api/flashcardsApi';
+import { MarkdownRenderer } from '../../../shared/components';
 
 export default function FlashcardStudySession({
   initialDeck = 'All',
@@ -327,10 +326,8 @@ export default function FlashcardStudySession({
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 block mb-2 shrink-0">
                       Answer / Explanation
                     </span>
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto break-words space-y-2 text-xs sm:text-sm text-neutral-700 leading-relaxed font-normal custom-scrollbar pr-2.5 max-h-[34vh] sm:max-h-[42vh]">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {currentCard.selectedText || ''}
-                      </ReactMarkdown>
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto text-xs sm:text-sm text-neutral-700 leading-relaxed font-normal custom-scrollbar pr-2.5 max-h-[34vh] sm:max-h-[42vh]">
+                      <MarkdownRenderer content={currentCard.selectedText || ''} />
                     </div>
                   </div>
                 ) : (
