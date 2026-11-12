@@ -6,4 +6,5 @@ export { default as Modal } from './Modal';
 export { default as PillBadge } from './PillBadge';
 export { default as SearchInput } from './SearchInput';
 export { default as Skeleton } from './Skeleton';
+export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as MarkdownRenderer, normalizeMarkdown, defaultMarkdownComponents } from './MarkdownRenderer';

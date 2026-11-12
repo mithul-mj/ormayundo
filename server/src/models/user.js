@@ -59,6 +59,38 @@ const userSchema = new mongoose.Schema({
     tokenVersion: {
         type: Number,
         default: 0
+    },
+    studyStats: {
+        totalReviews: {
+            type: Number,
+            default: 0
+        },
+        correctReviews: {
+            type: Number,
+            default: 0
+        },
+        dailyActivity: {
+            type: Object,
+            default: () => ({})
+        },
+        timeOfDay: {
+            Morning: {
+                total: { type: Number, default: 0 },
+                correct: { type: Number, default: 0 }
+            },
+            Afternoon: {
+                total: { type: Number, default: 0 },
+                correct: { type: Number, default: 0 }
+            },
+            Evening: {
+                total: { type: Number, default: 0 },
+                correct: { type: Number, default: 0 }
+            },
+            Night: {
+                total: { type: Number, default: 0 },
+                correct: { type: Number, default: 0 }
+            }
+        }
     }
 }, { timestamps: true });
 

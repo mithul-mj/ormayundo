@@ -4,7 +4,7 @@ import { getLocalDateString, getYesterdayLocalDateString, recordUserStudyActivit
 export const getAnalytics = async (req, res) => {
   try {
     const userId = req.user.id;
-    const cards = await RecallItem.find({ userId });
+    const cards = await RecallItem.find({ userId }).select('-reviewHistory');
 
     let newCards = 0;
     let learningCards = 0;
@@ -12,13 +12,9 @@ export const getAnalytics = async (req, res) => {
     let masteredCards = 0;
 
     const sources = {};
-    const heatmap = {};
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    let totalReviews = 0;
-    let hardForgotCount = 0;
 
     const upcoming = {
       'Today': 0,
@@ -26,13 +22,6 @@ export const getAnalytics = async (req, res) => {
       'In 3 Days': 0,
       'Next Week': 0,
       'Later': 0
-    };
-
-    const timeBuckets = {
-      Morning: { total: 0, correct: 0 },    // 5 AM - 12 PM
-      Afternoon: { total: 0, correct: 0 },  // 12 PM - 5 PM
-      Evening: { total: 0, correct: 0 },    // 5 PM - 9 PM
-      Night: { total: 0, correct: 0 }       // 9 PM - 5 AM
     };
 
     const now = new Date();
@@ -55,7 +44,7 @@ export const getAnalytics = async (req, res) => {
           newCards++;
         } else if (card.interval >= 21 || (card.isGraduated && card.interval >= 14)) {
           masteredCards++;
-        } else if (card.reviewHistory && card.reviewHistory.length > 2 && card.correctCount === 0 && card.interval === 0) {
+        } else if (card.reviewCount > 2 && card.correctCount === 0 && card.interval === 0) {
           relearningCards++;
         } else {
           learningCards++;
@@ -71,20 +60,7 @@ export const getAnalytics = async (req, res) => {
         } catch (e) { }
       }
 
-      // 3 & 4. Heatmap & Retention (Include all historical reviews)
-      card.reviewHistory.forEach(history => {
-        if (history.reviewedAt >= thirtyDaysAgo) {
-          const dateKey = history.reviewedAt.toISOString().split('T')[0];
-          heatmap[dateKey] = (heatmap[dateKey] || 0) + 1;
-        }
-
-        totalReviews++;
-        if (history.rating === 'hard' || history.rating === 'forgot') {
-          hardForgotCount++;
-        }
-      });
-
-      // 5. Workload (Active cards only)
+      // 3. Workload (Active cards only)
       if (card.status !== 'archived') {
         if (card.nextReviewAt <= endOfToday) upcoming['Today']++;
         else if (card.nextReviewAt <= endOfTomorrow) upcoming['Tomorrow']++;
@@ -97,15 +73,23 @@ export const getAnalytics = async (req, res) => {
     const topSources = Object.keys(sources).map(domain => ({ domain, count: sources[domain] }))
       .sort((a, b) => b.count - a.count).slice(0, 5);
 
-    const heatmapData = Object.keys(heatmap).map(date => ({ date, count: heatmap[date] }))
+    const userTimezone = req.query.timezone || req.headers['x-timezone'] || "UTC";
+    const stats = req.user.studyStats || {};
+    const dailyActivity = stats.dailyActivity || {};
+    const thirtyDaysAgoStr = getLocalDateString(thirtyDaysAgo, userTimezone);
+
+    const heatmapData = Object.keys(dailyActivity)
+      .filter(date => date >= thirtyDaysAgoStr || new Date(date) >= thirtyDaysAgo)
+      .map(date => ({ date, count: dailyActivity[date] }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    const retentionRate = totalReviews > 0 ? Math.round(((totalReviews - hardForgotCount) / totalReviews) * 100) : 100;
+    const totalReviews = stats.totalReviews || 0;
+    const correctReviews = stats.correctReviews || 0;
+    const retentionRate = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 100;
 
     const workloadData = Object.keys(upcoming).map(day => ({ day, count: upcoming[day] }));
 
     // Read optimized Streak from Database with timezone awareness & Rest Day Protection
-    const userTimezone = req.query.timezone || req.headers['x-timezone'] || "UTC";
     const todayStr = getLocalDateString(new Date(), userTimezone);
     const yesterdayStr = getYesterdayLocalDateString(new Date(), userTimezone);
 
@@ -142,51 +126,18 @@ export const getAnalytics = async (req, res) => {
       displayStreak = 0;
     }
 
-    // 🚀 OPTIMIZATION: MongoDB Aggregation Pipeline for Time of Day Accuracy
-    const timeAggregation = await RecallItem.aggregate([
-      { $match: { userId: req.user._id } },
-      { $unwind: "$reviewHistory" },
-      {
-        $project: {
-          hour: { $hour: { date: "$reviewHistory.reviewedAt", timezone: userTimezone } },
-          isCorrect: {
-            $in: ["$reviewHistory.rating", ["good", "easy"]]
-          }
-        }
-      },
-      {
-        $addFields: {
-          timeBucket: {
-            $switch: {
-              branches: [
-                { case: { $and: [{ $gte: ["$hour", 5] }, { $lt: ["$hour", 12] }] }, then: "Morning" },
-                { case: { $and: [{ $gte: ["$hour", 12] }, { $lt: ["$hour", 17] }] }, then: "Afternoon" },
-                { case: { $and: [{ $gte: ["$hour", 17] }, { $lt: ["$hour", 21] }] }, then: "Evening" }
-              ],
-              default: "Night"
-            }
-          }
-        }
-      },
-      {
-        $group: {
-          _id: "$timeBucket",
-          total: { $sum: 1 },
-          correct: { $sum: { $cond: ["$isCorrect", 1, 0] } }
-        }
-      }
-    ]);
-
-    // Format accuracy by time
+    // Format accuracy by time of day directly from user studyStats
+    const timeOfDay = stats.timeOfDay || {};
     const accuracyBuckets = { 
       "Morning": { accuracy: 0, total: 0, correct: 0 }, 
       "Afternoon": { accuracy: 0, total: 0, correct: 0 }, 
       "Evening": { accuracy: 0, total: 0, correct: 0 }, 
       "Night": { accuracy: 0, total: 0, correct: 0 } 
     };
-    timeAggregation.forEach(bucket => {
-      const accuracy = bucket.total > 0 ? Math.round((bucket.correct / bucket.total) * 100) : 0;
-      accuracyBuckets[bucket._id] = { accuracy, total: bucket.total, correct: bucket.correct };
+    ["Morning", "Afternoon", "Evening", "Night"].forEach(bucket => {
+      const b = timeOfDay[bucket] || { total: 0, correct: 0 };
+      const accuracy = b.total > 0 ? Math.round((b.correct / b.total) * 100) : 0;
+      accuracyBuckets[bucket] = { accuracy, total: b.total, correct: b.correct };
     });
 
     const accuracyByTime = [

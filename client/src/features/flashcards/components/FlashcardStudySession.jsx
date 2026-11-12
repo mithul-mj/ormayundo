@@ -10,8 +10,7 @@ import {
   ArrowRight,
   BookOpen
 } from 'lucide-react';
-import { calculateIntervalsForCard } from '../../../shared/services/spacedRepetition';
-import { useFlashcardsDataQuery, useReviewCardMutation } from '../api/flashcardsApi';
+import { useFlashcardsDataQuery, useReviewCardMutation, flashcardsApi } from '../api/flashcardsApi';
 import { MarkdownRenderer } from '../../../shared/components';
 
 export default function FlashcardStudySession({
@@ -44,7 +43,12 @@ export default function FlashcardStudySession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [practiceAllMode, setPracticeAllMode] = useState(false);
 
-  // Filter helper for due or all cards
+  // Paginated/Batching session queue state
+  const [sessionQueue, setSessionQueue] = useState([]);
+  const [totalDueCount, setTotalDueCount] = useState(0);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(true);
+
+  // Filter helper for fallback/practiceAll
   const filterCards = useCallback((cardsList, deckFilter, practiceAll) => {
     const now = new Date();
     let queue = cardsList;
@@ -57,37 +61,54 @@ export default function FlashcardStudySession({
       return queue;
     }
     return queue.filter((c) => {
-      if (!c.nextReviewAt) return true; // new cards are immediately due
+      if (!c.nextReviewAt) return true;
       return new Date(c.nextReviewAt) <= now;
     });
   }, []);
 
-  // Lock an immutable snapshot of the study queue for this session to avoid shifting under the user
-  const [sessionQueue, setSessionQueue] = useState(null);
-  const isInitializedRef = useRef(false);
-
+  // Fetch initial batch (limit: 5) using the unified /recall/due endpoint
   useEffect(() => {
-    if (!isInitializedRef.current && (cards.length > 0 || flashcardsData)) {
-      isInitializedRef.current = true;
-      setSessionQueue(filterCards(cards, selectedDeckFilter, practiceAllMode));
+    let ignore = false;
+    async function loadDueQueue() {
+      setIsLoadingQueue(true);
+      try {
+        const { cards: dueCards, totalDue } = await flashcardsApi.getDueCards({
+          limit: 5,
+          deck: selectedDeckFilter
+        });
+        if (!ignore) {
+          setSessionQueue(dueCards);
+          setTotalDueCount(totalDue);
+        }
+      } catch (err) {
+        console.error('Failed to load due cards from API, falling back to local cards:', err);
+        if (!ignore) {
+          const fallback = filterCards(cards, selectedDeckFilter, false);
+          setSessionQueue(fallback);
+          setTotalDueCount(fallback.length);
+        }
+      } finally {
+        if (!ignore) setIsLoadingQueue(false);
+      }
     }
-  }, [cards, flashcardsData, selectedDeckFilter, practiceAllMode, filterCards]);
-
-  const studyQueue = useMemo(() => {
-    return sessionQueue ?? filterCards(cards, selectedDeckFilter, practiceAllMode);
-  }, [sessionQueue, cards, selectedDeckFilter, practiceAllMode, filterCards]);
+    loadDueQueue();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedDeckFilter]);
 
   const handlePracticeAll = useCallback(() => {
     const allQueue = filterCards(cards, selectedDeckFilter, true);
     setSessionQueue(allQueue);
+    setTotalDueCount(allQueue.length);
     setCurrentIndex(0);
     setIsFlipped(false);
     setPracticeAllMode(true);
   }, [cards, selectedDeckFilter, filterCards]);
 
-  const currentCard = studyQueue[currentIndex] || null;
-  const isFinished = studyQueue.length > 0 && currentIndex >= studyQueue.length;
-  const isEmpty = studyQueue.length === 0 && !isFinished;
+  const currentCard = sessionQueue[currentIndex] || null;
+  const isFinished = !isLoadingQueue && sessionQueue.length > 0 && currentIndex >= sessionQueue.length;
+  const isEmpty = !isLoadingQueue && sessionQueue.length === 0 && !isFinished;
 
   const currentDeckColor = useMemo(() => {
     if (!currentCard) return '#FF385C';
@@ -97,16 +118,22 @@ export default function FlashcardStudySession({
     return found?.color || '#FF385C';
   }, [currentCard, decks]);
 
-  // Interval preview calculation for the current card
+  // Interval preview for the current card (supplied directly by backend)
   const intervalPreview = useMemo(() => {
-    if (!currentCard) return null;
-    return calculateIntervalsForCard(
-      currentCard.interval,
-      currentCard.correctCount,
-      currentCard.easinessFactor,
-      currentCard.learningStep,
-      currentCard.isGraduated
-    );
+    if (!currentCard?.intervals) {
+      return {
+        forgot: { text: '<1m' },
+        hard: { text: '5m' },
+        good: { text: '1d' },
+        easy: { text: '4d' }
+      };
+    }
+    return {
+      forgot: { text: currentCard.intervals.forgot || '<1m' },
+      hard: { text: currentCard.intervals.hard || '5m' },
+      good: { text: currentCard.intervals.good || '1d' },
+      easy: { text: currentCard.intervals.easy || '4d' }
+    };
   }, [currentCard]);
 
   const handleRating = useCallback(
@@ -116,8 +143,30 @@ export default function FlashcardStudySession({
 
       // Immediately reset flip state and advance index for zero-latency UI transition
       setIsFlipped(false);
-      setCurrentIndex((prev) => prev + 1);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
       setReviewedCount((prev) => prev + 1);
+
+      // Sliding window prefetch: when 2 or fewer cards remain in buffer, fetch next batch
+      const remainingInBuffer = sessionQueue.length - nextIndex;
+      if (!practiceAllMode && remainingInBuffer <= 2 && sessionQueue.length < totalDueCount) {
+        const excludeIds = sessionQueue.map((c) => c._id);
+        flashcardsApi
+          .getDueCards({
+            limit: 5,
+            excludeIds,
+            deck: selectedDeckFilter
+          })
+          .then(({ cards: nextBatch, totalDue }) => {
+            if (nextBatch && nextBatch.length > 0) {
+              setSessionQueue((prev) => [...prev, ...nextBatch]);
+              if (typeof totalDue === 'number') {
+                setTotalDueCount(totalDue);
+              }
+            }
+          })
+          .catch((err) => console.error('Prefetch next due cards error in web app:', err));
+      }
 
       // Submit rating to backend in background without freezing UI
       setIsSubmitting(true);
@@ -133,7 +182,7 @@ export default function FlashcardStudySession({
         }
       );
     },
-    [currentCard, reviewMutation]
+    [currentCard, currentIndex, sessionQueue, totalDueCount, practiceAllMode, selectedDeckFilter, reviewMutation]
   );
 
   // Keyboard Navigation: Space = Flip, 1=Forgot, 2=Hard, 3=Good, 4=Easy, Esc = Exit
@@ -189,10 +238,10 @@ export default function FlashcardStudySession({
 
         {/* Counter & Close */}
         <div className="flex items-center gap-4">
-          {!isFinished && !isEmpty && (
+          {!isFinished && !isEmpty && !isLoadingQueue && (
             <span className="text-xs font-semibold text-neutral-400">
               Card <span className="text-white font-bold">{currentIndex + 1}</span> of{' '}
-              <span className="text-white font-bold">{studyQueue.length}</span>
+              <span className="text-white font-bold">{Math.max(totalDueCount, sessionQueue.length)}</span>
             </span>
           )}
           <button
@@ -208,8 +257,12 @@ export default function FlashcardStudySession({
       {/* Main Flashcard Stage */}
       <div className="flex-1 flex items-center justify-center py-4">
         <div className="max-w-2xl w-full">
-          {/* STATE 1: All caught up / Finished Session */}
-          {isFinished ? (
+          {isLoadingQueue ? (
+            <div className="bg-neutral-900/90 border border-neutral-800 rounded-3xl p-12 text-center text-white shadow-2xl flex flex-col items-center justify-center min-h-[380px] sm:min-h-[440px] animate-pulse">
+              <Brain className="w-10 h-10 text-brand mb-3 animate-bounce" />
+              <p className="text-neutral-400 text-sm font-semibold">Loading due cards...</p>
+            </div>
+          ) : isFinished ? (
             <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 sm:p-12 text-center text-white shadow-2xl relative overflow-hidden animate-scale-up">
               <Confetti
                 width={typeof window !== 'undefined' ? window.innerWidth : 600}
@@ -273,7 +326,7 @@ export default function FlashcardStudySession({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : currentCard ? (
             /* STATE 3: Interactive Study Card */
             <div
               key={currentCard._id}
@@ -412,6 +465,11 @@ export default function FlashcardStudySession({
                 </div>
               )}
             </div>
+          ) : (
+            <div className="bg-neutral-900/90 border border-neutral-800 rounded-3xl p-12 text-center text-white shadow-2xl flex flex-col items-center justify-center min-h-[380px] sm:min-h-[440px]">
+              <Brain className="w-10 h-10 text-brand mb-3 animate-pulse" />
+              <p className="text-neutral-400 text-sm font-semibold">Preparing your study card...</p>
+            </div>
           )}
         </div>
       </div>
@@ -423,8 +481,8 @@ export default function FlashcardStudySession({
             className="bg-brand h-full transition-all duration-300"
             style={{
               width: `${
-                studyQueue.length > 0
-                  ? Math.min(100, Math.round(((currentIndex) / studyQueue.length) * 100))
+                sessionQueue.length > 0
+                  ? Math.min(100, Math.round((currentIndex / Math.max(totalDueCount, sessionQueue.length)) * 100))
                   : 0
               }%`,
             }}

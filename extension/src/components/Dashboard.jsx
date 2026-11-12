@@ -14,11 +14,11 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import api from '../api';
-import { calculateIntervalsForCard } from '../services/spacedRepetition';
 import { MESSAGES } from '../constants';
 
 const Dashboard = ({ onLogout }) => {
   const [dueCards, setDueCards] = useState([]);
+  const [totalDue, setTotalDue] = useState(0);
   const [decks, setDecks] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -37,13 +37,17 @@ const Dashboard = ({ onLogout }) => {
   const fetchCards = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
+    setCurrentCardIndex(0);
     try {
       const [cardsRes, decksRes] = await Promise.all([
-        api.get('/recall/due'),
+        api.get('/recall/due?limit=5'),
         api.get('/decks')
       ]);
-      setDueCards(cardsRes.data);
-      setDecks(decksRes.data);
+      const cards = Array.isArray(cardsRes.data) ? cardsRes.data : (cardsRes.data?.cards || []);
+      const total = typeof cardsRes.data?.totalDue === 'number' ? cardsRes.data.totalDue : cards.length;
+      setDueCards(cards);
+      setTotalDue(total);
+      setDecks(decksRes.data || []);
     } catch (error) {
       console.error('Failed to fetch due cards:', error);
       if (error.isAuthError || error.response?.status === 401) {
@@ -61,12 +65,15 @@ const Dashboard = ({ onLogout }) => {
     async function loadData() {
       try {
         const [cardsRes, decksRes] = await Promise.all([
-          api.get('/recall/due'),
+          api.get('/recall/due?limit=5'),
           api.get('/decks')
         ]);
         if (!ignore) {
-          setDueCards(cardsRes.data);
-          setDecks(decksRes.data);
+          const cards = Array.isArray(cardsRes.data) ? cardsRes.data : (cardsRes.data?.cards || []);
+          const total = typeof cardsRes.data?.totalDue === 'number' ? cardsRes.data.totalDue : cards.length;
+          setDueCards(cards);
+          setTotalDue(total);
+          setDecks(decksRes.data || []);
         }
       } catch (error) {
         console.error('Failed to fetch due cards:', error);
@@ -96,15 +103,7 @@ const Dashboard = ({ onLogout }) => {
 
   const getNextIntervalText = (ratingStr) => {
     if (!dueCards[currentCardIndex]) return '';
-    const card = dueCards[currentCardIndex];
-    const intervals = calculateIntervalsForCard(
-      card.interval,
-      card.correctCount,
-      card.easinessFactor,
-      card.learningStep,
-      card.isGraduated
-    );
-    return intervals[ratingStr]?.text || '';
+    return dueCards[currentCardIndex].intervals?.[ratingStr] || '';
   };
 
   const showToast = (message) => {
@@ -126,7 +125,26 @@ const Dashboard = ({ onLogout }) => {
 
       // Move to next card
       setIsFlipped(false);
-      setCurrentCardIndex((prev) => prev + 1);
+      const nextIndex = currentCardIndex + 1;
+      setCurrentCardIndex(nextIndex);
+
+      // Sliding window prefetch: when 2 or fewer cards remain in buffer, fetch next batch
+      const remainingInBuffer = dueCards.length - nextIndex;
+      if (remainingInBuffer <= 2 && dueCards.length < totalDue) {
+        const excludeIds = dueCards.map((c) => c._id).join(',');
+        api
+          .get(`/recall/due?limit=5&excludeIds=${excludeIds}`)
+          .then((res) => {
+            const nextCards = Array.isArray(res.data) ? res.data : (res.data?.cards || []);
+            if (nextCards.length > 0) {
+              setDueCards((prev) => [...prev, ...nextCards]);
+              if (typeof res.data?.totalDue === 'number') {
+                setTotalDue(res.data.totalDue);
+              }
+            }
+          })
+          .catch((err) => console.error('Failed to prefetch next due cards in extension:', err));
+      }
     } catch (error) {
       console.error('Failed to submit review:', error);
       if (error.isAuthError || error.response?.status === 401) {
@@ -469,7 +487,7 @@ const Dashboard = ({ onLogout }) => {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium bg-red-50 text-brand px-3 py-1 rounded-full">
-            {dueCards.length - currentCardIndex} Due
+            {Math.max(0, totalDue - currentCardIndex)} Due
           </span>
           <button
             onClick={handleDelete}

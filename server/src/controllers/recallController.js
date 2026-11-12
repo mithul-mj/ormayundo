@@ -2,7 +2,7 @@ import RecallItem from '../models/recallItem.js';
 import Deck from '../models/deck.js';
 import SystemConfig from '../models/systemConfig.js';
 import { aiQueue } from '../workers/aiWorker.js';
-import { calculateNextReview } from '../services/spacedRepetitionService.js';
+import { calculateNextReview, calculateIntervalsForCard } from '../services/spacedRepetitionService.js';
 import { recordUserStudyActivity, getLocalDateString } from '../utils/streakHelper.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
 import { JOB_NAMES, MESSAGES, DECKS } from '../utils/constants.js';
@@ -11,6 +11,37 @@ import { JOB_NAMES, MESSAGES, DECKS } from '../utils/constants.js';
 const normalizeUrl = (url) => {
   if (!url) return '';
   return String(url).trim().split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+};
+
+// Formats a card document into a clean DTO with precomputed intervals
+const formatCardResponse = (card) => {
+  if (!card) return null;
+  const intervals = calculateIntervalsForCard(
+    card.interval,
+    card.correctCount,
+    card.easinessFactor,
+    card.learningStep,
+    card.isGraduated
+  );
+
+  return {
+    _id: card._id,
+    question: card.question,
+    selectedText: card.selectedText,
+    deck: card.deck || 'General',
+    sourceUrl: card.sourceUrl || '',
+    reviewCount: card.reviewCount || 0,
+    nextReviewAt: card.nextReviewAt,
+    lastReviewedAt: card.lastReviewedAt,
+    createdAt: card.createdAt,
+    updatedAt: card.updatedAt,
+    intervals: {
+      forgot: intervals.forgot.text,
+      hard: intervals.hard.text,
+      good: intervals.good.text,
+      easy: intervals.easy.text
+    }
+  };
 };
 
 // Queue a new recall item from selected text
@@ -103,15 +134,57 @@ export const createRecallItem = async (req, res) => {
   }
 };
 
-// Fetch cards due for review (nextReviewAt <= now)
+// Fetch cards due for review (nextReviewAt <= now) with sliding-window batching support
 export const getDueItems = async (req, res) => {
-  const dueItems = await RecallItem.find({
+  const { limit, excludeIds, deck } = req.query;
+
+  const now = new Date();
+  const baseQuery = {
     userId: req.user._id,
     status: 'active',
-    nextReviewAt: { $lte: new Date() }
-  }).sort({ isGraduated: 1, nextReviewAt: 1 });
+    $or: [
+      { nextReviewAt: { $lte: now } },
+      { nextReviewAt: { $exists: false } },
+      { nextReviewAt: null }
+    ]
+  };
 
-  res.status(STATUS_CODES.OK).json(dueItems);
+  if (deck && deck !== 'All') {
+    baseQuery.deck = new RegExp(`^${deck.trim()}$`, 'i');
+  }
+
+  // Count total due items matching the base query (without exclusions)
+  const totalDue = await RecallItem.countDocuments(baseQuery);
+
+  const fetchQuery = { ...baseQuery };
+  if (excludeIds) {
+    const idsToExclude = String(excludeIds)
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length === 24);
+
+    if (idsToExclude.length > 0) {
+      fetchQuery._id = { $nin: idsToExclude };
+    }
+  }
+
+  let queryBuilder = RecallItem.find(fetchQuery)
+    .sort({ isGraduated: 1, nextReviewAt: 1 });
+
+  if (limit) {
+    const parsedLimit = parseInt(limit, 10);
+    if (!isNaN(parsedLimit) && parsedLimit > 0) {
+      queryBuilder = queryBuilder.limit(parsedLimit);
+    }
+  }
+
+  const dueItems = await queryBuilder.lean();
+
+  res.set('Cache-Control', 'no-cache');
+  res.status(STATUS_CODES.OK).json({
+    cards: dueItems.map(formatCardResponse),
+    totalDue
+  });
 };
 
 // Rate a flashcard and reschedule via SM-2
@@ -153,18 +226,70 @@ export const reviewRecallItem = async (req, res) => {
   if (!item.reviewCount) item.reviewCount = 0;
   item.reviewCount += 1;
 
-  if (!item.reviewHistory) item.reviewHistory = [];
-  item.reviewHistory.push({
-    reviewedAt: new Date(),
-    rating,
-    newInterval
-  });
-
   await item.save();
 
   // Sustain user study streak upon card review with client timezone awareness & Rest Day Protection
   const clientTimezone = req.headers['x-timezone'] || req.body.timezone || req.query.timezone || 'UTC';
   const todayStr = getLocalDateString(new Date(), clientTimezone);
+
+  // Update user's studyStats for analytics (no per-card history stored)
+  if (req.user) {
+    if (!req.user.studyStats) {
+      req.user.studyStats = {
+        totalReviews: 0,
+        correctReviews: 0,
+        dailyActivity: {},
+        timeOfDay: {
+          Morning: { total: 0, correct: 0 },
+          Afternoon: { total: 0, correct: 0 },
+          Evening: { total: 0, correct: 0 },
+          Night: { total: 0, correct: 0 }
+        }
+      };
+    }
+
+    req.user.studyStats.totalReviews = (req.user.studyStats.totalReviews || 0) + 1;
+    const isCorrect = (rating === 'good' || rating === 'easy');
+    if (isCorrect) {
+      req.user.studyStats.correctReviews = (req.user.studyStats.correctReviews || 0) + 1;
+    }
+
+    if (!req.user.studyStats.dailyActivity) req.user.studyStats.dailyActivity = {};
+    req.user.studyStats.dailyActivity[todayStr] = (req.user.studyStats.dailyActivity[todayStr] || 0) + 1;
+
+    let localHour = new Date().getUTCHours();
+    try {
+      const hourFormatter = new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        hour12: false,
+        timeZone: clientTimezone
+      });
+      const parsed = parseInt(hourFormatter.format(new Date()), 10);
+      if (!isNaN(parsed)) localHour = parsed % 24;
+    } catch {
+      localHour = new Date().getUTCHours();
+    }
+
+    let timeBucket = 'Night';
+    if (localHour >= 5 && localHour < 12) timeBucket = 'Morning';
+    else if (localHour >= 12 && localHour < 17) timeBucket = 'Afternoon';
+    else if (localHour >= 17 && localHour < 21) timeBucket = 'Evening';
+
+    if (!req.user.studyStats.timeOfDay) {
+      req.user.studyStats.timeOfDay = {
+        Morning: { total: 0, correct: 0 },
+        Afternoon: { total: 0, correct: 0 },
+        Evening: { total: 0, correct: 0 },
+        Night: { total: 0, correct: 0 }
+      };
+    }
+    const bucket = req.user.studyStats.timeOfDay[timeBucket] || { total: 0, correct: 0 };
+    bucket.total = (bucket.total || 0) + 1;
+    if (isCorrect) bucket.correct = (bucket.correct || 0) + 1;
+    req.user.studyStats.timeOfDay[timeBucket] = bucket;
+
+    req.user.markModified('studyStats');
+  }
 
   const otherActiveItems = await RecallItem.find({
     userId: req.user._id,
@@ -178,7 +303,7 @@ export const reviewRecallItem = async (req, res) => {
   const isRestDayContinuance = !hasPastDueOthers && (req.user.currentStreak || 0) > 0;
   await recordUserStudyActivity(req.user, clientTimezone, { isRestDayContinuance });
 
-  res.status(STATUS_CODES.OK).json(item);
+  res.status(STATUS_CODES.OK).json(formatCardResponse(item));
 };
 
 // Soft delete a single recall item
@@ -215,8 +340,8 @@ export const getAllItems = async (req, res) => {
 
   if (includeDecks) {
     let [items, decks] = await Promise.all([
-      RecallItem.find(query).sort({ createdAt: -1 }),
-      Deck.find({ userId: req.user._id }).sort({ createdAt: 1 })
+      RecallItem.find(query).sort({ createdAt: -1 }).lean(),
+      Deck.find({ userId: req.user._id }).sort({ createdAt: 1 }).lean()
     ]);
 
     if (decks.length === 0) {
@@ -229,12 +354,12 @@ export const getAllItems = async (req, res) => {
     }
 
     res.set('Cache-Control', 'no-cache');
-    return res.status(STATUS_CODES.OK).json({ cards: items, decks });
+    return res.status(STATUS_CODES.OK).json({ cards: items.map(formatCardResponse), decks });
   }
 
-  const items = await RecallItem.find(query).sort({ createdAt: -1 });
+  const items = await RecallItem.find(query).sort({ createdAt: -1 }).lean();
   res.set('Cache-Control', 'no-cache');
-  res.status(STATUS_CODES.OK).json(items);
+  res.status(STATUS_CODES.OK).json(items.map(formatCardResponse));
 };
 
 // Update question, text, or deck of a card
@@ -252,5 +377,5 @@ export const editRecallItem = async (req, res) => {
   if (deck) item.deck = deck;
 
   await item.save();
-  res.status(STATUS_CODES.OK).json(item);
+  res.status(STATUS_CODES.OK).json(formatCardResponse(item));
 };

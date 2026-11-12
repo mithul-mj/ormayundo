@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { API_URL } from './shared/config';
 import { queryKeys } from './shared/lib/queryKeys';
 import { initWebPush } from './shared/services/firebase';
-import { DashboardNavbar } from './shared/components';
+import { DashboardNavbar, ErrorBoundary } from './shared/components';
 import { ROUTES, APP_TABS } from './shared/constants';
 import { AnalyticsSkeleton } from './features/analytics/components';
 import { FlashcardsSkeleton } from './features/flashcards/components';
@@ -189,32 +189,44 @@ export default function App() {
         )}
 
         <main className="flex-1 animate-fade-in pb-12">
-          {activeTab === APP_TABS.DASHBOARD ? (
-            <Suspense fallback={<AnalyticsSkeleton />}>
-              <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
-            </Suspense>
-          ) : activeTab === APP_TABS.MANAGE ? (
-            <Suspense
-              fallback={
-                <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
-                  <FlashcardsSkeleton />
-                </div>
-              }
-            >
-              <FlashcardManager onOpenStudySession={() => setIsStudySessionOpen(true)} />
-            </Suspense>
-          ) : (
-            <Suspense fallback={<AnalyticsSkeleton />}>
-              <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
-            </Suspense>
-          )}
+          <ErrorBoundary
+            title="Dashboard View Error"
+            description="An issue occurred while loading this section. Click Try Again to reload it."
+          >
+            {activeTab === APP_TABS.DASHBOARD ? (
+              <Suspense fallback={<AnalyticsSkeleton />}>
+                <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
+              </Suspense>
+            ) : activeTab === APP_TABS.MANAGE ? (
+              <Suspense
+                fallback={
+                  <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
+                    <FlashcardsSkeleton />
+                  </div>
+                }
+              >
+                <FlashcardManager onOpenStudySession={() => setIsStudySessionOpen(true)} />
+              </Suspense>
+            ) : (
+              <Suspense fallback={<AnalyticsSkeleton />}>
+                <AnalyticsDashboard onNavigateToReview={() => setIsStudySessionOpen(true)} />
+              </Suspense>
+            )}
+          </ErrorBoundary>
         </main>
 
         {/* Global Interactive Flashcard Study Session Modal */}
         {isStudySessionOpen && (
-          <Suspense fallback={null}>
-            <FlashcardStudySession onClose={() => setIsStudySessionOpen(false)} />
-          </Suspense>
+          <ErrorBoundary
+            isModal
+            title="Study Session Encountered an Issue"
+            description="A problem occurred during this review session. Your saved cards and previous ratings are secure."
+            onClose={() => setIsStudySessionOpen(false)}
+          >
+            <Suspense fallback={null}>
+              <FlashcardStudySession onClose={() => setIsStudySessionOpen(false)} />
+            </Suspense>
+          </ErrorBoundary>
         )}
       </div>
     );

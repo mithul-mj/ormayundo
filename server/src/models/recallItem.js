@@ -48,11 +48,6 @@ const recallItemSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    reviewHistory: [{
-        reviewedAt: { type: Date, default: Date.now },
-        rating: { type: String, enum: ['forgot', 'hard', 'good', 'easy'] },
-        newInterval: Number
-    }],
     status: {
         type: String,
         enum: ['active', 'archived'],
