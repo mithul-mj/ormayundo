@@ -11,14 +11,14 @@ export const flashcardsApi = {
     return res.data;
   },
 
-  getDueCards: async ({ limit = 5, excludeIds = [], deck = 'All' } = {}) => {
+  getDueCards: async ({ limit = 5, excludeIds = [], deck = 'All', signal } = {}) => {
     const params = new URLSearchParams();
     if (limit) params.set('limit', String(limit));
     if (deck && deck !== 'All') params.set('deck', deck);
     if (excludeIds && excludeIds.length > 0) {
       params.set('excludeIds', excludeIds.join(','));
     }
-    const res = await apiClient.get(`/recall/due?${params.toString()}`);
+    const res = await apiClient.get(`/recall/due?${params.toString()}`, { signal });
     const data = res.data;
     const cards = Array.isArray(data) ? data : (data?.cards || []);
     const totalDue = typeof data?.totalDue === 'number' ? data.totalDue : cards.length;

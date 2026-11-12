@@ -66,34 +66,37 @@ export default function FlashcardStudySession({
     });
   }, []);
 
-  // Fetch initial batch (limit: 5) using the unified /recall/due endpoint
+  // Fetch initial batch (limit: 5) using the unified /recall/due endpoint with AbortController
   useEffect(() => {
-    let ignore = false;
+    const controller = new AbortController();
+
     async function loadDueQueue() {
       setIsLoadingQueue(true);
       try {
         const { cards: dueCards, totalDue } = await flashcardsApi.getDueCards({
           limit: 5,
-          deck: selectedDeckFilter
+          deck: selectedDeckFilter,
+          signal: controller.signal
         });
-        if (!ignore) {
-          setSessionQueue(dueCards);
-          setTotalDueCount(totalDue);
-        }
+        setSessionQueue(dueCards);
+        setTotalDueCount(totalDue);
       } catch (err) {
-        console.error('Failed to load due cards from API, falling back to local cards:', err);
-        if (!ignore) {
-          const fallback = filterCards(cards, selectedDeckFilter, false);
-          setSessionQueue(fallback);
-          setTotalDueCount(fallback.length);
+        if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') {
+          return;
         }
+        console.error('Failed to load due cards from API, falling back to local cards:', err);
+        const fallback = filterCards(cards, selectedDeckFilter, false);
+        setSessionQueue(fallback);
+        setTotalDueCount(fallback.length);
       } finally {
-        if (!ignore) setIsLoadingQueue(false);
+        if (!controller.signal.aborted) {
+          setIsLoadingQueue(false);
+        }
       }
     }
     loadDueQueue();
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, [selectedDeckFilter]);
 
