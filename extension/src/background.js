@@ -237,7 +237,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         }
 
         if (!res.ok) {
-          throw new Error('Server returned ' + res.status);
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Server returned ' + res.status);
         }
 
         console.log('[background.js] Successfully saved to backend!');
@@ -322,7 +323,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         if (!response.ok) {
-          throw new Error('Server returned ' + response.status);
+          const errData = await response.json().catch(() => ({}));
+          const errMessage = errData.message || 'Server returned ' + response.status;
+          const error = new Error(errMessage);
+          error.status = response.status;
+          throw error;
         }
 
         console.log('[background.js] Successfully saved to backend!');
@@ -333,7 +338,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
       } catch (error) {
         console.error('[background.js] Error saving from floating button:', error);
-        notifySaveError(error.message, sender.tab?.id);
+        chrome.action.setBadgeText({ text: '✕' });
+        chrome.action.setBadgeBackgroundColor({ color: COLORS.badgeError });
+        setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
+
         sendResponse({
           success: false,
           status: error.status || 500,

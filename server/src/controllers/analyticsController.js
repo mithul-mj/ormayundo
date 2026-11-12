@@ -1,5 +1,5 @@
 import RecallItem from '../models/recallItem.js';
-import { getLocalDateString, getYesterdayLocalDateString } from '../utils/streakHelper.js';
+import { getLocalDateString, getYesterdayLocalDateString, recordUserStudyActivity } from '../utils/streakHelper.js';
 
 export const getAnalytics = async (req, res) => {
   try {
@@ -104,7 +104,7 @@ export const getAnalytics = async (req, res) => {
 
     const workloadData = Object.keys(upcoming).map(day => ({ day, count: upcoming[day] }));
 
-    // Read optimized Streak from Database with timezone awareness
+    // Read optimized Streak from Database with timezone awareness & Rest Day Protection
     const userTimezone = req.query.timezone || req.headers['x-timezone'] || "UTC";
     const todayStr = getLocalDateString(new Date(), userTimezone);
     const yesterdayStr = getYesterdayLocalDateString(new Date(), userTimezone);
@@ -112,9 +112,33 @@ export const getAnalytics = async (req, res) => {
     const lastActiveDate = req.user.lastStudiedDate || req.user.lastAddedDate;
     const lastActiveStr = lastActiveDate ? getLocalDateString(new Date(lastActiveDate), userTimezone) : null;
 
-    // If neither today nor yesterday had study activity, streak is broken (0)
+    // Check overdue and rest day status
+    const activeCards = cards.filter(c => c.status !== 'archived');
+    const hasPastDueCards = activeCards.some(
+      (c) => c.nextReviewAt && getLocalDateString(new Date(c.nextReviewAt), userTimezone) < todayStr
+    );
+    const dueTodayCount = upcoming['Today'] || 0;
+    const isAllCaughtUpToday = activeCards.length > 0 && dueTodayCount === 0 && !hasPastDueCards;
+    const isRestDayProtected = activeCards.length > 0 && !hasPastDueCards && (req.user.currentStreak || 0) > 0;
+
     let displayStreak = req.user.currentStreak || 0;
-    if (lastActiveStr !== todayStr && lastActiveStr !== yesterdayStr) {
+    if (lastActiveStr === todayStr) {
+      displayStreak = req.user.currentStreak || 0;
+    } else if (lastActiveStr === yesterdayStr) {
+      displayStreak = req.user.currentStreak || 0;
+      // If user has zero cards due today and is all caught up, visiting automatically credits check-in
+      if (isAllCaughtUpToday) {
+        await recordUserStudyActivity(req.user, userTimezone);
+        displayStreak = req.user.currentStreak || 0;
+      }
+    } else if (isRestDayProtected) {
+      // Days between lastActive and today were rest days (0 cards were overdue)
+      displayStreak = req.user.currentStreak || 0;
+      if (isAllCaughtUpToday) {
+        await recordUserStudyActivity(req.user, userTimezone, { isRestDayContinuance: true });
+        displayStreak = req.user.currentStreak || 0;
+      }
+    } else {
       displayStreak = 0;
     }
 

@@ -278,10 +278,10 @@ export default function FlashcardStudySession({
             /* STATE 3: Interactive Study Card */
             <div
               key={currentCard._id}
-              className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xl overflow-hidden flex flex-col min-h-[380px] sm:min-h-[440px] animate-fade-in"
+              className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[82vh] min-h-[380px] sm:min-h-[440px] animate-fade-in"
             >
               {/* Card Meta Bar */}
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-neutral-50/50">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-neutral-50/50 shrink-0">
                 <span
                   className="text-xs font-bold px-3 py-1 rounded-full text-white shadow-2xs"
                   style={{ backgroundColor: currentDeckColor }}
@@ -310,10 +310,10 @@ export default function FlashcardStudySession({
               </div>
 
               {/* Card Body */}
-              <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
+              <div className="p-6 sm:p-8 flex-1 min-h-0 flex flex-col justify-between space-y-4 overflow-hidden">
                 {/* Question Area */}
-                <div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand block mb-2">
+                <div className="shrink-0 max-h-[24vh] overflow-y-auto custom-scrollbar pr-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand block mb-1.5">
                     Question
                   </span>
                   <h3 className="text-lg sm:text-xl font-bold text-neutral-900 leading-snug">
@@ -323,18 +323,18 @@ export default function FlashcardStudySession({
 
                 {/* Answer Area (Revealed on Flip) */}
                 {isFlipped ? (
-                  <div className="pt-4 border-t border-gray-100 animate-fade-in space-y-2">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 block">
+                  <div className="pt-4 border-t border-gray-100 animate-fade-in flex-1 min-h-0 flex flex-col">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 block mb-2 shrink-0">
                       Answer / Explanation
                     </span>
-                    <div className="text-xs sm:text-sm text-neutral-700 leading-relaxed font-normal overflow-x-auto break-words space-y-2">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto break-words space-y-2 text-xs sm:text-sm text-neutral-700 leading-relaxed font-normal custom-scrollbar pr-2.5 max-h-[34vh] sm:max-h-[42vh]">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {currentCard.selectedText || ''}
                       </ReactMarkdown>
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8 flex items-center justify-center">
+                  <div className="py-8 flex items-center justify-center shrink-0">
                     <button
                       onClick={() => setIsFlipped(true)}
                       className="px-8 py-3.5 rounded-full bg-neutral-900 hover:bg-black text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
@@ -348,7 +348,7 @@ export default function FlashcardStudySession({
 
               {/* Bottom Difficulty Rating Bar (Only when flipped) */}
               {isFlipped ? (
-                <div className="p-4 sm:p-5 bg-neutral-50 border-t border-gray-100 animate-fade-in">
+                <div className="p-4 sm:p-5 bg-neutral-50 border-t border-gray-100 animate-fade-in shrink-0">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {/* Forgot Button */}
                     <button

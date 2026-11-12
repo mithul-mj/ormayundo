@@ -21,12 +21,14 @@ export const getYesterdayLocalDateString = (date = new Date(), timezone = 'UTC')
 };
 
 /**
- * Updates a user's study streak when they create or review a card.
+ * Updates a user's study streak when they create, review a card, or check in on an authorized rest day.
+ * Supports rest day continuance when no cards were overdue in intervening days.
  * @param {Object} user - Mongoose User document
  * @param {string} timezone - e.g. "Asia/Kolkata", "America/New_York", etc.
+ * @param {Object} [options] - Optional flags like isRestDayContinuance
  * @returns {Promise<boolean>} whether streak was changed
  */
-export const recordUserStudyActivity = async (user, timezone = 'UTC') => {
+export const recordUserStudyActivity = async (user, timezone = 'UTC', options = {}) => {
   if (!user) return false;
 
   const now = new Date();
@@ -45,11 +47,11 @@ export const recordUserStudyActivity = async (user, timezone = 'UTC') => {
     return false;
   }
 
-  // Consecutive day
-  if (lastActiveStr === yesterdayStr) {
+  // Consecutive day OR valid rest day continuance (no cards were overdue in the gap)
+  if (lastActiveStr === yesterdayStr || options.isRestDayContinuance) {
     user.currentStreak = (user.currentStreak || 0) + 1;
   } else {
-    // First time or missed day
+    // First time or missed day with overdue cards
     user.currentStreak = 1;
   }
 

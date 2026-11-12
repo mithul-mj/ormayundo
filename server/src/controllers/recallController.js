@@ -3,7 +3,7 @@ import Deck from '../models/deck.js';
 import SystemConfig from '../models/systemConfig.js';
 import { aiQueue } from '../workers/aiWorker.js';
 import { calculateNextReview } from '../services/spacedRepetitionService.js';
-import { recordUserStudyActivity } from '../utils/streakHelper.js';
+import { recordUserStudyActivity, getLocalDateString } from '../utils/streakHelper.js';
 import { STATUS_CODES } from '../utils/statusCodes.js';
 import { JOB_NAMES, MESSAGES, DECKS } from '../utils/constants.js';
 
@@ -66,9 +66,21 @@ export const createRecallItem = async (req, res) => {
     }
   }
 
-  // Update user study streak with client timezone awareness
+  // Update user study streak with client timezone awareness & Rest Day Protection
   const clientTimezone = req.headers['x-timezone'] || req.body.timezone || req.query.timezone || 'UTC';
-  await recordUserStudyActivity(req.user, clientTimezone);
+  const todayStr = getLocalDateString(new Date(), clientTimezone);
+
+  // Check if any existing cards were overdue before today
+  const activeItems = await RecallItem.find({
+    userId,
+    status: 'active'
+  }).select('nextReviewAt');
+
+  const hasPastDueOthers = activeItems.some(
+    (c) => c.nextReviewAt && getLocalDateString(new Date(c.nextReviewAt), clientTimezone) < todayStr
+  );
+  const isRestDayContinuance = !hasPastDueOthers && (req.user.currentStreak || 0) > 0;
+  await recordUserStudyActivity(req.user, clientTimezone, { isRestDayContinuance });
 
   // Push task to BullMQ Queue
   try {
@@ -150,9 +162,21 @@ export const reviewRecallItem = async (req, res) => {
 
   await item.save();
 
-  // Sustain user study streak upon card review with client timezone awareness
+  // Sustain user study streak upon card review with client timezone awareness & Rest Day Protection
   const clientTimezone = req.headers['x-timezone'] || req.body.timezone || req.query.timezone || 'UTC';
-  await recordUserStudyActivity(req.user, clientTimezone);
+  const todayStr = getLocalDateString(new Date(), clientTimezone);
+
+  const otherActiveItems = await RecallItem.find({
+    userId: req.user._id,
+    status: 'active',
+    _id: { $ne: item._id }
+  }).select('nextReviewAt');
+
+  const hasPastDueOthers = otherActiveItems.some(
+    (c) => c.nextReviewAt && getLocalDateString(new Date(c.nextReviewAt), clientTimezone) < todayStr
+  );
+  const isRestDayContinuance = !hasPastDueOthers && (req.user.currentStreak || 0) > 0;
+  await recordUserStudyActivity(req.user, clientTimezone, { isRestDayContinuance });
 
   res.status(STATUS_CODES.OK).json(item);
 };
